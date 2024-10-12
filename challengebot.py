@@ -3,6 +3,7 @@ import threading
 import time
 import os
 import numpy as np
+import sys
 
 frame = 0
 debug = False
@@ -23,6 +24,9 @@ class Robot:
     
     def distance(self):
         return self.driver.distance()
+    
+    def exit(self):
+        self.driver.exit()
 
 # Simulator Driver
 class SimulatorDriver:
@@ -33,10 +37,11 @@ class SimulatorDriver:
         self.left_motor_velocity = 0
         self.right_motor_velocity = 0
         self.radius = 20  # Robot radius for visualization
-        size = 50
+        size = 100
         self.img_left = pygame.image.load(os.path.join('img', "left", f"{size}", 'robobunny.png'))
         self.img_right = pygame.image.load(os.path.join('img', "right", f"{size}", 'robobunny.png'))
         self.img = self.img_left
+        self.running = True
 
         self.start_simulation()
     
@@ -67,13 +72,6 @@ class SimulatorDriver:
         # Clear the screen
         screen.fill((255, 255, 255))
 
-        # Draw the robot as a simple circle
-        # pygame.draw.circle(screen, (0, 0, 255), (int(self.x), int(self.y)), self.radius)
-        # self.rect = pygame.Rect(pos[0], pos[1], 16, 16)
-        # self.image = pygame.image.load("/path/to/image_file.png")
-        rect = self.img.get_rect()
-        rect.center = int(self.x), int(self.y)
-
         # # keep bunny facing forward
         global frame
         frame += 1
@@ -83,6 +81,9 @@ class SimulatorDriver:
             self.img = pygame.transform.rotate(self.img_right, self.heading + 90)
         else:
             self.img = pygame.transform.rotate(self.img_left, self.heading - 90)
+
+        rect = self.img.get_rect()
+        rect.center = int(self.x), int(self.y)
         screen.blit(self.img, rect)
 
         # Update the display
@@ -90,13 +91,8 @@ class SimulatorDriver:
     
     def run_simulation(self):
         # Start the Pygame rendering loop
-        running = True
         clock = pygame.time.Clock()
-        while running:
-            # Check for quitting the Pygame window
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+        while self.running:
             
             # Update the robot state
             self.update()
@@ -107,7 +103,12 @@ class SimulatorDriver:
             # Cap the frame rate to 60 FPS
             clock.tick(60)
 
+    def exit(self):
+        print("Exiting simulation")
+        self.running = False
+        pygame.display.quit()
         pygame.quit()
+        sys.exit()
         
     def start_simulation(self):
         # Initialize the Pygame window

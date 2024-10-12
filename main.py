@@ -35,7 +35,7 @@ def dance():
 # Main student program
 while True:
     # Get input from the user
-    command = input("Enter command (forward/left/right/stop): ")
+    command = input("Enter command (f/l/r/stop/exit/dance): ")
 
     if command == "f":
         forward(1)
@@ -54,3 +54,5 @@ while True:
 
     # Check distance from an obstacle
     print("Distance to object:", robot.distance())
+
+robot.exit()
