@@ -179,6 +179,8 @@ class RealRobotDriver:
         GPIO.output(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.LOW)
         GPIO.output(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.LOW)
         GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.LOW)
+        GPIO.output(self.GPIO_LEFT_TRIGGER, GPIO.LOW)
+        GPIO.output(self.GPIO_RIGHT_TRIGGER, GPIO.LOW)
     
     def motors(self, left, right, seconds):
         # Call real robot hardware control for left motor
@@ -193,6 +195,8 @@ class RealRobotDriver:
             GPIO.output(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.LOW)
             GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.HIGH)
         time.sleep(seconds)
+        self.stop()
 
     def exit(self):
+        self.stop()
         return
