@@ -2,35 +2,22 @@
 from challengebot import Robot
 import time
 
-robot = Robot(use_simulator=True)
+robot = Robot(use_simulator=False)
 print("Robot simulation started!")
 
-def stop():
-    robot.left_motor(0)
-    robot.right_motor(0)
-
 def forward(x):
-    robot.right_motor(1)
-    robot.left_motor(1)
-    time.sleep(x)
-    stop()
+    robot.motors(1, 1, x)
 
 def right(x):
-    robot.right_motor(1)
-    robot.left_motor(-1)
-    time.sleep(x)
-    stop()
+    robot.motors(1, -1, x)
 
 def left(x):
-    robot.right_motor(-1)
-    robot.left_motor(1)
-    time.sleep(x)
-    stop()
+    robot.motors(-1, 1, x)
 
 def dance():
-    right(0.5)
-    left(0.5)
-    forward(0.5)
+    right(5)
+    left(5)
+    forward(5)
 
 # Main student program
 while True:
@@ -43,8 +30,6 @@ while True:
         left(1)
     elif command == "r":
         right(1)
-    elif command == "stop":
-        stop()
     elif command == "exit":
         break
     elif command == "dance":
@@ -53,6 +38,6 @@ while True:
         print("Unknown command")
 
     # Check distance from an obstacle
-    print("Distance to object:", robot.distance())
+    print("Distance to object:", robot.sonars())
 
 robot.exit()
