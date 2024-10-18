@@ -187,14 +187,16 @@ class RealRobotDriver:
             GPIO.output(blue_pin, GPIO.LOW)
             GPIO.output(orange_pin, GPIO.LOW)
             GPIO.output(speed_pin, GPIO.LOW)
-        elif velocity > 0:
-            GPIO.output(blue_pin, GPIO.HIGH)
-            GPIO.output(orange_pin, GPIO.LOW)
-            GPIO.output(speed_pin, GPIO.HIGH)
         else:
-            GPIO.output(blue_pin, GPIO.LOW)
-            GPIO.output(orange_pin, GPIO.HIGH)
-            GPIO.output(speed_pin, GPIO.HIGH)
+            speed = int(abs(velocity) * 255)
+            if velocity > 0:
+                GPIO.output(blue_pin, GPIO.HIGH)
+                GPIO.output(orange_pin, GPIO.LOW)
+                GPIO.output(speed_pin, speed)
+            else:
+                GPIO.output(blue_pin, GPIO.LOW)
+                GPIO.output(orange_pin, GPIO.HIGH)
+                GPIO.output(speed_pin, speed)
     
     def motors(self, left, right, seconds):
         # Call real robot hardware control for left motor

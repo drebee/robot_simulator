@@ -25,11 +25,11 @@ while True:
     command = input("Enter command (f/l/r/stop/exit/dance): ")
 
     if command == "f":
-        forward(1)
+        forward(0.1)
     elif command == "l":
-        left(1)
+        left(0.1)
     elif command == "r":
-        right(1)
+        right(0.1)
     elif command == "exit":
         break
     elif command == "dance":
