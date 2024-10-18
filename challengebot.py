@@ -113,17 +113,32 @@ class RealRobotDriver:
         #GPIO Mode (BOARD / BCM)
         GPIO.setmode(GPIO.BCM)
 
-        #set GPIO Pins
+        #set GPIO Pins for Sonar Sensors
         self.GPIO_LEFT_TRIGGER = 5
         self.GPIO_LEFT_ECHO = 6
         self.GPIO_RIGHT_TRIGGER = 17
         self.GPIO_RIGHT_ECHO = 27
+
+        # set GPIO pins for motors
+        self.GPIO_LEFT_MOTOR_SPEED = 12
+        self.GPIO_LEFT_MOTOR_BLUE = 1
+        self.GPIO_LEFT_MOTOR_ORANGE = 7
+        self.GPIO_RIGHT_MOTOR_SPEED = 18
+        self.GPIO_RIGHT_MOTOR_BLUE = 24
+        self.GPIO_RIGHT_MOTOR_ORANGE = 23
 
         #set GPIO direction (IN / OUT)
         GPIO.setup(self.GPIO_LEFT_TRIGGER, GPIO.OUT)
         GPIO.setup(self.GPIO_LEFT_ECHO, GPIO.IN)
         GPIO.setup(self.GPIO_RIGHT_TRIGGER, GPIO.OUT)
         GPIO.setup(self.GPIO_RIGHT_ECHO, GPIO.IN)
+
+        GPIO.setup(self.GPIO_LEFT_MOTOR_SPEED, GPIO.OUT)
+        GPIO.setup(self.GPIO_LEFT_MOTOR_BLUE, GPIO.OUT)
+        GPIO.setup(self.GPIO_LEFT_MOTOR_ORANGE, GPIO.OUT)
+        GPIO.setup(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.OUT)
+        GPIO.setup(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.OUT)
+        GPIO.setup(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.OUT)
 
     def sonars(self):
         left_distance = self.sonar(self.GPIO_LEFT_TRIGGER, self.GPIO_LEFT_ECHO)
@@ -157,11 +172,27 @@ class RealRobotDriver:
 
         return distance
     
+    def stop(self):
+        GPIO.output(self.GPIO_LEFT_MOTOR_BLUE, GPIO.LOW)
+        GPIO.output(self.GPIO_LEFT_MOTOR_ORANGE, GPIO.LOW)
+        GPIO.output(self.GPIO_LEFT_MOTOR_SPEED, GPIO.LOW)
+        GPIO.output(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.LOW)
+        GPIO.output(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.LOW)
+        GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.LOW)
+    
     def motors(self, left, right, seconds):
         # Call real robot hardware control for left motor
         #self.robot_hardware.set_left_motor_speed(left)
         #self.robot_hardware.set_right_motor_speed(right)
-        pass
+        if left > 0:
+            GPIO.output(self.GPIO_LEFT_MOTOR_BLUE, GPIO.HIGH)
+            GPIO.output(self.GPIO_LEFT_MOTOR_ORANGE, GPIO.LOW)
+            GPIO.output(self.GPIO_LEFT_MOTOR_SPEED, GPIO.HIGH)
+        if right > 0:
+            GPIO.output(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.HIGH)
+            GPIO.output(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.LOW)
+            GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.HIGH)
+        time.sleep(seconds)
 
     def exit(self):
         return
