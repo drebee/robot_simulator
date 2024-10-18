@@ -181,19 +181,27 @@ class RealRobotDriver:
         GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.LOW)
         GPIO.output(self.GPIO_LEFT_TRIGGER, GPIO.LOW)
         GPIO.output(self.GPIO_RIGHT_TRIGGER, GPIO.LOW)
+
+    def motor(self, velocity, speed_pin, blue_pin, orange_pin):
+        if velocity == 0:
+            GPIO.output(blue_pin, GPIO.LOW)
+            GPIO.output(orange_pin, GPIO.LOW)
+            GPIO.output(speed_pin, GPIO.LOW)
+        elif velocity > 0:
+            GPIO.output(blue_pin, GPIO.HIGH)
+            GPIO.output(orange_pin, GPIO.LOW)
+            GPIO.output(speed_pin, GPIO.HIGH)
+        else:
+            GPIO.output(blue_pin, GPIO.LOW)
+            GPIO.output(orange_pin, GPIO.HIGH)
+            GPIO.output(speed_pin, GPIO.HIGH)
     
     def motors(self, left, right, seconds):
         # Call real robot hardware control for left motor
         #self.robot_hardware.set_left_motor_speed(left)
         #self.robot_hardware.set_right_motor_speed(right)
-        if left > 0:
-            GPIO.output(self.GPIO_LEFT_MOTOR_BLUE, GPIO.HIGH)
-            GPIO.output(self.GPIO_LEFT_MOTOR_ORANGE, GPIO.LOW)
-            GPIO.output(self.GPIO_LEFT_MOTOR_SPEED, GPIO.HIGH)
-        if right > 0:
-            GPIO.output(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.HIGH)
-            GPIO.output(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.LOW)
-            GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.HIGH)
+        self.motor(left, self.GPIO_LEFT_MOTOR_SPEED, self.GPIO_LEFT_MOTOR_BLUE, self.GPIO_LEFT_MOTOR_ORANGE)
+        self.motor(right, self.GPIO_RIGHT_MOTOR_SPEED, self.GPIO_RIGHT_MOTOR_BLUE, self.GPIO_RIGHT_MOTOR_ORANGE)
         time.sleep(seconds)
         self.stop()
 
