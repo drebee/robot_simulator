@@ -7,6 +7,16 @@ import time
 frame = 0
 debug = False
 
+def cart2pol(x, y):
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+    return(rho, phi)
+
+def pol2cart(rho, phi):
+    x = rho * np.cos(phi)
+    y = rho * np.sin(phi)
+    return(x, y)
+
 class Robot:
     def __init__(self, use_simulator = True):
         if use_simulator:
@@ -23,36 +33,72 @@ class Robot:
     def exit(self):
         self.driver.exit()
 
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
 # Simulator Driver
 class SimulatorDriver:
     def __init__(self):
-        self.x = 300  # Starting x position
-        self.y = 200  # Starting y position
+        self.origin = Point(300, 200)
+        self.x = self.origin.x
+        self.y = self.origin.y
         self.heading = 0 # pointing to the right
         self.left_motor_velocity = 0
         self.right_motor_velocity = 0
         self.radius = 20  # Robot radius for visualization
-        size = 100
+        self.robot_width = 200
+        self.robot_height = 200
+        size = 200
         self.img_left = pygame.image.load(os.path.join('img', "left", f"{size}", 'robobunny.png'))
         self.img_right = pygame.image.load(os.path.join('img', "right", f"{size}", 'robobunny.png'))
         self.img = self.img_left
         self.running = True
         self.clock = pygame.time.Clock()
         self.fps = 60
+        self.box_width = 660 #mm
+        self.box_height = 410 #mm
+        self.max_x_box = self.box_width / 2 + self.origin.x
+        self.min_x_box = self.origin.x - self.box_width / 2
+        self.max_y_box = self.box_height / 2 + self.origin.y
+        self.min_y_box = self.origin.y - self.box_height / 2
 
         self.start_simulation()
+
+    def find_corners(self, x, y, heading):
+        i = np.array([1, 2, 3, 4])
+        angle_to_corner = np.arctan(self.robot_width / self.robot_height)
+        phi = heading - angle_to_corner
+        omega = np.sqrt((self.robot_height / 2)**2 + (self.robot_width / 2)**2)
+        corner_offsets = pol2cart(omega, phi + np.radians(90) * i)
+        corner_x_values = x + corner_offsets[0]
+        corner_y_values = y + corner_offsets[1]
+        return corner_x_values, corner_y_values
+    
+    def detect_crash(self):
+        corner_x_values, corner_y_values = self.find_corners(self.x, self.y, self.heading)
+        biggest_x = np.max(corner_x_values)
+        biggest_y = np.max(corner_y_values)
+        smallest_x = np.min(corner_x_values)
+        smallest_y = np.min(corner_y_values)
+        x_crash = (biggest_x > self.max_x_box) or (smallest_x < self.min_x_box)
+        y_crash = (biggest_y > self.max_y_box) or (smallest_y < self.min_y_box)
+        return (x_crash or y_crash)
 
     def motors(self, left, right, seconds):
         # power (+ / -) to left and right motors
         # number of seconds to maintain that
 
+        degrees_per_frame = 0.98
+
         # for a certain number of seconds:
-        for _ in range(seconds * self.fps):
+        for _ in range(round(seconds * self.fps)):
             # update position
             if right == 1 and left == -1:
-                self.heading = (self.heading - 1) % 360
+                self.heading = (self.heading - degrees_per_frame) % 360
             elif right == -1 and left == 1:
-                self.heading = (self.heading + 1) % 360
+                self.heading = (self.heading + degrees_per_frame) % 360
             elif right == left:
                 if right == 0:
                     pass
@@ -63,6 +109,9 @@ class SimulatorDriver:
             else:
                 raise Exception("Ooops! Dr. Ebee didn't write code that let's you use those numbers as input to the `motors` function. If you *really* want those numbers, schedule some time on her calendar to help her implement that change!!")
 
+            if self.detect_crash():
+                raise Exception("Ooops! Dr. Ebee doesn't know how to simulate what happens when you hit the walls. Also, it's not good for the robot anyway. Try again!!")
+            
             self.render()
     
     def sonars(self):
