@@ -1,9 +1,6 @@
 # Import the robot control commands from the library
-from challengebot import Robot
+from simulator import robot
 import time
-
-robot = Robot(use_simulator=False)
-print("Robot simulation started!")
 
 def forward(x):
     robot.motors(1, 1, x)
