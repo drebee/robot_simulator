@@ -25,9 +25,20 @@ class Robot:
             self.driver = RealRobotDriver()  # driver can be a simulator or real robot
 
     def motors(self, left, right, seconds):
+        """Sends power to each wheel on the robot
+
+        Parameters:
+        * `left` power to the left motor (1 is forward, -1 is backward, 0 no power)
+        * `right` power to the right motor (1, -1, 0)
+        * `seconds` number of seconds (can be decimal)
+        """
         self.driver.motors(left, right, seconds)
     
     def sonars(self):
+        """Read from the sonar sensors
+        
+        Output: a tuple of the left and right distances from the sonar sensor to the nearest object in centimeters
+        """
         return self.driver.sonars()
     
     def exit(self):
@@ -115,7 +126,11 @@ class SimulatorDriver:
             self.render()
     
     def sonars(self):
-        return 10
+        # figure out distance from left sonar to box wall
+        left_dist = None
+        # figure out distance from right sonar to box wall
+        right_dist = None
+        return left_dist, right_dist
 
     def render(self):
         # Clear the screen
