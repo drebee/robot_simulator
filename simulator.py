@@ -37,7 +37,7 @@ class Robot:
     def sonars(self):
         """Read from the sonar sensors
         
-        Output: a tuple of the left and right distances from the sonar sensor to the nearest object in centimeters
+        Output: a tuple of the left and right distances from the sonar sensor to the nearest object in mm (or pixels)
         """
         return self.driver.sonars()
     
