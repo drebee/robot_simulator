@@ -131,6 +131,7 @@ class SimulatorDriver:
         a = None
         b = None
         if 0 < h < 90:
+            a = self.box_height - sonar_position.y
             b = self.box_width - sonar_position.x #distance to right
         elif 90 < h < 180:
             a = sonar_position.x #d to left
@@ -162,13 +163,11 @@ class SimulatorDriver:
         direction_vector = v / np.linalg.norm(v)
         left_sonar_position = left_front_corner + direction_vector * 3
         left_sonar_position = Point(left_sonar_position[0], left_sonar_position[1])
-        print(left_sonar_position.x, left_sonar_position.y)
 
         v = left_front_corner - right_front_corner
         direction_vector = v / np.linalg.norm(v)
         right_sonar_position = right_front_corner + direction_vector * 3 
         right_sonar_position = Point(right_sonar_position[0], right_sonar_position[1])
-        print(right_sonar_position.x, right_sonar_position.y)
 
         # draw a line between the front corners
         # sonar positions are 3cm in from the front corners
