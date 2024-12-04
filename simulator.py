@@ -152,7 +152,7 @@ class SimulatorDriver:
             return sonar_position.x
         else:
             print(sonar_position.x, sonar_position.y)
-        d = min(a / np.cos(h), b/ np.sin(h))
+        d = min(a / np.cos(-h % 90), b/ np.sin(-h % 90))
         return d
 
     def sonars(self):
