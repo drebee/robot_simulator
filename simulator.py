@@ -127,33 +127,41 @@ class SimulatorDriver:
             self.render()
     
     def dist_to_box(self, sonar_position, h):
-        # from sonar position, draw a line in direction heading, and find distance to edge of box, which is:
-        a = None
-        b = None
-        if 0 < h < 90:
-            a = self.box_height - sonar_position.y
-            b = self.box_width - sonar_position.x #distance to right
-        elif 90 < h < 180:
-            a = sonar_position.x #d to left
-            b = self.box_height - sonar_position.y #d to top
-        elif 180 < h < 270:
-            a = sonar_position.y #d to bottom
-            b = sonar_position.x #d to left
-        elif 270 < h < 360:
-            a = self.box_width - sonar_position.x #d to right
-            b = sonar_position.y #d to bottom
-        elif h == 0:
-            return self.box_width - sonar_position.x
+        # from sonar position, draw a line in direction heading, and find distance to nearest edge of box
+
+        # first, imagine that all 4 box edges extend out in infinite lines.
+        # we can calculate the distance (in the direction of the heading) to each box edge.
+        
+        # let N, W, S, E be the distances to the walls in the four cardinal directions
+        S = sonar_position.y
+        N = self.box_height - S
+        W = sonar_position.x
+        E = self.box_width - W
+        # let T, R, B, L be the distances to the walls in the direction the robot is pointing
+        # h is the angle between the heading direction vector and the bottom/top wall
+        if h == 0:
+            return E
         elif h == 90:
-            return self.box_height - sonar_position.y
+            return N
         elif h == 180:
-            return sonar_position.y
+            return W
         elif h == 270:
-            return sonar_position.x
+            return S
         else:
-            print(sonar_position.x, sonar_position.y)
-        d = min(a / np.cos(-h % 90), b/ np.sin(-h % 90))
-        return d
+            if np.sin(h) > 0:
+                # np.sin(h) * T = N
+                T = N / np.sin(h)
+                dist_to_horizontal_line = T
+            else:
+                B = S / -np.sin(h)
+                dist_to_horizontal_line = B
+            if np.cos(h) > 0:
+                R = E / np.cos(h)
+                dist_to_vertical_line = R
+            else:
+                L = W / -np.cos(h)
+                dist_to_vertical_line = L
+            return min(dist_to_horizontal_line, dist_to_vertical_line)
 
     def sonars(self):
         corners = self.find_corners(self.x, self.y, self.heading)
