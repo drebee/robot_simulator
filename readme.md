@@ -18,3 +18,47 @@ Project Requirements:
 
 Dr. EB Todo:
 * [ ] add noise to simulator motors and sonars
+
+Wiring:
+
+Pi - HDMI side long row from ethernet to SD card:
+* ground
+* blank x3
+* pin 6 = left trigger
+* pin 5 = left echo
+* blank x7
+* pin 27 = right echo
+* pin 17 = right trigger
+* blank x5
+
+Pi - NON-HDMI side long row from ethernet to SD card:
+* blank x4
+* pin 12 = left speed (white)
+* blank
+* pin 1 = left forward (blue)
+* pin 7 = left backward (orange)
+* blank x3
+* pin 24 = right forward (blue)
+* pin 23 = right backward (orange)
+* blank
+* pin 18 = right speed (white)
+* blank x4
+* 5v = power line of breadboard
+
+Breadboard - left motor, left of caterpillar if indent is on top, from top to bottom:
+* white
+* yellow
+* ground
+* ground
+* orange
+* battery power
+
+Breadboard - right motor, right of caterpillar if indent is on top, from top to bottom:
+* power from pi
+* blue
+* green
+* ground
+* ground
+* yellow
+* orange
+* white
