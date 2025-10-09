@@ -10,6 +10,7 @@ BACKWARD = -1
 STOP = 0
 
 debug = False
+mode = "obstacles"
 frame = 0
 
 def sin(degrees):
@@ -188,6 +189,29 @@ class Box:
         corners = self.corners()
         return corners['front_right'], corners['front_left']
 
+class Obstacle:
+    """Represents a rectangular obstacle in the arena"""
+    
+    def __init__(self, center_x, center_y, width, height, heading=0):
+        self.box = Box(center_x, center_y, width, height, heading=heading)
+        self.center = Point(center_x, center_y)
+        self.width = width
+        self.height = height
+        self.heading = heading
+    
+    def corners(self):
+        """Get the four corners of the obstacle"""
+        return self.box.corners()
+    
+    def contains_point(self, point):
+        """Check if a point is inside this obstacle"""
+        # This needs to be updated for rotated boxes, but skip for now
+        half_width = self.width / 2
+        half_height = self.height / 2
+        
+        return (abs(point.x - self.center.x) < half_width and 
+                abs(point.y - self.center.y) < half_height)
+
 # Simulator Driver
 class SimulatorDriver:
     def __init__(self, n_obstacles = 0, randomize_obstacles = False):
@@ -225,6 +249,38 @@ class SimulatorDriver:
 
         self._calculate_box_boundaries()
 
+        self.obstacle_specs = [
+            {
+                'width': 70,
+                'height': 70, 
+                'name': 'Square',
+                'x': -300,
+                'y': 180,
+                'heading': 30
+            },
+            {
+                'width': 100, 
+                'height': 120, 
+                'name': 'Short Rectangle',
+                'x': 400,
+                'y': 50,
+                'heading': 0
+            },
+            {
+                'width': 70,
+                'height': 250,
+                'name': 'Long Rectangle',
+                'x': -100,
+                'y': -170,
+                'heading': 60
+            },
+        ]
+
+        # Obstacles
+        self.obstacles = []
+        if self.n_obstacles > 0:
+            self._generate_obstacles()
+
         # Graphics
         self.clock = pygame.time.Clock()
         self._load_images()
@@ -233,6 +289,48 @@ class SimulatorDriver:
     def _get_robot_box(self):
         """Get the current robot as a Box"""
         return Box(self.x, self.y, self.robot_width, self.robot_height, self.heading)
+    
+    def _generate_obstacles(self):
+        """Generate obstacles in the arena"""
+        
+        for i in range(min(self.n_obstacles, 5)):  # Max 5 obstacles
+            spec = self.obstacle_specs[i]
+            
+            width = spec['width']
+            height = spec['height']
+            x, y = spec['x'], spec['y']
+            heading = spec.get('heading', 0)  # Default to 0 if not specified
+            
+            obstacle = Obstacle(x, y, width, height, heading)
+            self.obstacles.append(obstacle)
+            print(f"Obstacle {i+1} ({spec['name']}): {width}x{height}mm at ({x}, {y}), rotated {heading}°")
+
+    def _draw_obstacles(self):
+        """Draw obstacles on the screen"""
+        for i, obstacle in enumerate(self.obstacles):
+            # Get obstacle corners
+            corners = obstacle.corners()
+            
+            # Convert corners to screen coordinates
+            corner_points = [
+                corners['front_right'].to_screen(self.screen),
+                corners['front_left'].to_screen(self.screen),
+                corners['back_left'].to_screen(self.screen),
+                corners['back_right'].to_screen(self.screen)
+            ]
+            
+            # Draw filled rectangle
+            pygame.draw.polygon(self.screen, (150, 75, 0), corner_points)  # Brown color
+            
+            # Draw border
+            pygame.draw.polygon(self.screen, (0, 0, 0), corner_points, 2)  # Black border
+            
+            # Draw obstacle number (optional, for debugging)
+            if debug:
+                center_screen = obstacle.center.to_screen(self.screen)
+                font = self.debug_font
+                label = font.render(f"{i+1}", True, (255, 255, 255))
+                self.screen.blit(label, (center_screen[0] - 5, center_screen[1] - 5))
 
     def _calculate_box_boundaries(self):
         self.max_x_box = self.box_width / 2 + self.origin.x
@@ -485,6 +583,7 @@ class SimulatorDriver:
         
         self._draw_robot()
         self._draw_arena_border()
+        self._draw_obstacles()
         self._draw_debug_info()
         self._draw_sonar_debug()
         
@@ -541,10 +640,10 @@ class SimulatorDriver:
         self.render()
 
 if debug:
-    robot = Robot(use_simulator=True)
-    print("Robot simulation started!")
-
-    robot.motors(1, 1, 3)
+    if mode == "movement":
+        robot = Robot(use_simulator=True)
+    elif mode == "obstacles":
+        robot = Robot(use_simulator=True, n_obstacles=3, randomize_obstacles=False)
     while True:
         command = input("What do you want the robot to do next?")
         if command == "q":
@@ -577,7 +676,7 @@ else:
             break
         elif mode == "challenge":
             print("*** Simulator settings:")
-            n = int(input("*** How many obstacles? (0-5): "))
+            n = int(input("*** How many obstacles? (0-3): "))
             is_random = input("*** Randomize obstacle positions? (y/n): ").lower() == 'y'
             print(f"Starting simulation with {n} obstacles...")
             robot = Robot(use_simulator=True, n_obstacles=n, randomize_obstacles=is_random)
