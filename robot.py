@@ -4,7 +4,7 @@ import time
 # Real Robot Driver
 class RealRobotDriver:
     def __init__(self):
-        
+        print("robot driver initializing...") 
         #GPIO Mode (BOARD / BCM)
         GPIO.setmode(GPIO.BCM)
 
@@ -54,10 +54,12 @@ class RealRobotDriver:
         # save StartTime
         while GPIO.input(GPIO_ECHO) == 0:
             StartTime = time.time()
+            #print(f"{StartTime=}")
 
         # save time of arrival
         while GPIO.input(GPIO_ECHO) == 1:
             StopTime = time.time()
+            #print(f"{StopTime=}")
 
         # time difference between start and arrival
         TimeElapsed = StopTime - StartTime

@@ -186,6 +186,7 @@ class Box:
 # Simulator Driver
 class SimulatorDriver:
     def __init__(self):
+        print("simulator initializing...")
 
         # Physics constants
         self.fps = 60
@@ -540,7 +541,5 @@ else:
     if mode == "r":
         from robot import RealRobotDriver
         robot = Robot(use_simulator=False)
-        print("Robot simulation started!")
     else:
         robot = Robot(use_simulator=True)
-        print("Robot simulation started!")

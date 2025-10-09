@@ -1,14 +1,19 @@
-from simulator import Robot, FORWARD, BACKWARD, STOP
-
-# Create your robot
-robot = Robot(use_simulator=True)
+from simulator import robot, FORWARD, BACKWARD, STOP
 
 while True:
-    left_power = input("Left motor: ")
-    right_power = input("Right motor: ")
-    seconds = input("Seconds: ")
+    command = input("Motor (m) or Sonars (s) or Quit (q)? ")
+    if command == "m":
+        left_power = int(input("Left motor: "))
+        right_power = int(input("Right motor: "))
+        seconds = int(input("Seconds: "))
 
-    robot.motors(left = left_power, right = right_power, seconds = seconds)
+        robot.motors(left = left_power, right = right_power, seconds = seconds)
 
-# When you're done, close the simulator
-robot.exit()
+    elif command == "s":
+        print("Left: ", robot.left_sonar())
+        print("Right: ", robot.right_sonar())
+
+    elif command == "q":
+        robot.exit()
+        break
+
