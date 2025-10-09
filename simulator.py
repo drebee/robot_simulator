@@ -4,8 +4,13 @@ import numpy as np
 import sys
 import time
 
+# Motor power constants - use these with the motors() function
+FORWARD = 1
+BACKWARD = -1
+STOP = 0
+
+debug = True
 frame = 0
-debug = False
 
 def sin(degrees):
     return np.sin(np.radians(degrees))
@@ -23,6 +28,14 @@ def pol2cart(rho, phi):
     y = rho * np.sin(phi)
     return(x, y)
 
+def add_border(surface, color=(0, 0, 0), thickness=3):
+    """Add a border to a pygame surface"""
+    width, height = surface.get_size()
+    new_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    new_surface.blit(surface, (0, 0))
+    pygame.draw.rect(new_surface, color, new_surface.get_rect(), thickness)
+    return new_surface
+
 class Robot:
     def __init__(self, use_simulator = True):
         if use_simulator:
@@ -31,23 +44,59 @@ class Robot:
             self.driver = RealRobotDriver()  # driver can be a simulator or real robot
 
     def motors(self, left, right, seconds):
-        """Sends power to each wheel on the robot
-
+        """Control the robot's wheels
+        
         Parameters:
-        * `left` power to the left motor (1 is forward, -1 is backward, 0 no power)
-        * `right` power to the right motor (1, -1, 0)
-        * `seconds` number of seconds (can be decimal)
+        * left: power for the LEFT wheel (use FORWARD, BACKWARD, or STOP)
+        * right: power for the RIGHT wheel (use FORWARD, BACKWARD, or STOP)
+        * seconds: how long to run the motors (can be a decimal like 0.5)
+        
+        Examples:
+            # Go straight forward for 2 seconds
+            robot.motors(left=FORWARD, right=FORWARD, seconds=2)
+            
+            # Go straight backward for 1 second
+            robot.motors(left=BACKWARD, right=BACKWARD, seconds=1)
+            
+            # Spin left in place for 0.5 seconds
+            robot.motors(left=BACKWARD, right=FORWARD, seconds=0.5)
+            
+            # Spin right in place for 0.5 seconds
+            robot.motors(left=FORWARD, right=BACKWARD, seconds=0.5)
+            
+            # Stop both wheels
+            robot.motors(left=STOP, right=STOP, seconds=0.1)
         """
         self.driver.motors(left, right, seconds)
     
-    def sonars(self):
-        """Read from the sonar sensors
+    def left_sonar(self):
+        """Read the distance from the left sonar sensor
         
-        Output: a tuple of the left and right distances from the sonar sensor to the nearest object in mm (or pixels)
+        Returns: distance to the nearest object in millimeters (mm)
+        
+        Example:
+            distance = robot.left_sonar()
+            if distance < 100:
+                print("Something is close on the left!")
         """
-        return self.driver.sonars()
+        left, right = self.driver.sonars()
+        return left
+    
+    def right_sonar(self):
+        """Read the distance from the right sonar sensor
+        
+        Returns: distance to the nearest object in millimeters (mm)
+        
+        Example:
+            distance = robot.right_sonar()
+            if distance < 100:
+                print("Something is close on the right!")
+        """
+        left, right = self.driver.sonars()
+        return right
     
     def exit(self):
+        """Stop the simulator and close the window"""
         self.driver.exit()
 
 class Point:
@@ -65,136 +114,266 @@ class Point:
     def to_array(self):
         return np.array([self.x, self.y])
     
+    def to_screen(self, screen):
+        """Convert to screen coordinates for drawing"""
+        screen_width, screen_height = screen.get_size()
+        x_pixels = self.x + screen_width / 2
+        y_pixels = -self.y + screen_height / 2
+        return (int(x_pixels), int(y_pixels))
+    
+    def distance_to(self, other):
+        dx = other.x - self.x
+        dy = other.y - self.y
+        return np.sqrt(dx**2 + dy**2)
+    
     def __add__(self, other):
         return Point(self.x + other.x, self.y + other.y)
 
     def __sub__(self, other):
         return Point(self.x - other.x, self.y - other.y)
-    
+
 class Vector:
     def __init__(self, r, theta):
         self.r = r
         self.theta = theta
+    
     def __repr__(self):
         return f"(r={round(self.r)}, theta={round(self.theta)})"
+    
     def to_point(self):
         x = self.r * cos(self.theta)
         y = self.r * sin(self.theta)
         return Point(round(x), round(y))
+    
+    @classmethod
+    def from_points(cls, p1, p2):
+        """Create a vector from p1 to p2"""
+        dx = p2.x - p1.x
+        dy = p2.y - p1.y
+        rho, phi = cart2pol(dx, dy)
+        return cls(rho, np.degrees(phi))
         
+
+class Box:
+    """Represents a rectangular box (robot or arena) with a center, size, and heading"""
+    
+    def __init__(self, center_x, center_y, width, height, heading=0):
+        self.center = Point(center_x, center_y)
+        self.width = width
+        self.height = height
+        self.heading = heading  # 0 for arena (axis-aligned)
+    
+    def corners(self):
+        """Get the four corners of the box
+        
+        Returns: dict with keys 'front_right', 'front_left', 'back_left', 'back_right'
+        """
+        half_diagonal = np.sqrt(self.width**2 + self.height**2) / 2
+        base_angle = np.degrees(np.arctan2(self.height, self.width))
+        
+        return {
+            'front_right': self.center + Vector(half_diagonal, self.heading + 360 - base_angle).to_point(),
+            'front_left': self.center + Vector(half_diagonal, self.heading + base_angle).to_point(),
+            'back_left': self.center + Vector(half_diagonal, self.heading + 180 - base_angle).to_point(),
+            'back_right': self.center + Vector(half_diagonal, self.heading + 180 + base_angle).to_point()
+        }
+    
+    def front_edge(self):
+        """Get the two front corners"""
+        corners = self.corners()
+        return corners['front_right'], corners['front_left']
 
 # Simulator Driver
 class SimulatorDriver:
     def __init__(self):
-        self.origin = Point(0, 0)#Point(300, 200)
-        self.x = self.origin.x
-        self.y = self.origin.y
-        self.heading = 0 # pointing to the right
-        self.left_motor_velocity = 0
-        self.right_motor_velocity = 0
-        self.radius = 20  # Robot radius for visualization
-        self.robot_size = 200
+
+        # Physics constants
+        self.fps = 60
+        self.degrees_per_frame = 0.98
+        self.speed_per_power = 1
+        
+        # Robot dimensions
+        # actual robot pegboard is 20cm x 20cm with the wheels sticking out
+        # another 1cm on each side
+        self.robot_size = 100
         self.robot_width = self.robot_size
         self.robot_height = self.robot_size
-        size = self.robot_size
-        self.img_left = pygame.image.load(os.path.join('img', "left", f"{size}", 'robobunny.png'))
-        self.img_right = pygame.image.load(os.path.join('img', "right", f"{size}", 'robobunny.png'))
-        self.img = self.img_left
-        self.running = True
+        self.sonar_inset = 10
+
+        # Box dimensions
+        # TODO add a zoom parameter for the whole simulation
+        self.box_width = 1000  # mm
+        self.box_height = 500  # mm
+        self.wall_thickness = 5
+        self.padding = 10
+
+        # Arena box (stationary)
+        self.arena = Box(0, 0, self.box_width, self.box_height, heading=0)
+
+        # Robot state
+        self.origin = Point(0, 0)
+        self.x = self.origin.x
+        self.y = self.origin.y
+        self.heading = 0  # degrees, 0 = pointing right
+
+        self._calculate_box_boundaries()
+
+        # Graphics
         self.clock = pygame.time.Clock()
-        self.fps = 60
-        self.box_width = 660 #mm
-        self.box_height = 410 #mm
+        self._load_images()
+        self.start_simulation()
+
+    def _get_robot_box(self):
+        """Get the current robot as a Box"""
+        return Box(self.x, self.y, self.robot_width, self.robot_height, self.heading)
+
+    def _calculate_box_boundaries(self):
         self.max_x_box = self.box_width / 2 + self.origin.x
         self.min_x_box = self.origin.x - self.box_width / 2
         self.max_y_box = self.box_height / 2 + self.origin.y
         self.min_y_box = self.origin.y - self.box_height / 2
 
-        self.start_simulation()
+    def _draw_debug_info(self):
+        """Draw coordinate labels for debugging"""
+        if not debug:
+            return
+        
+        font = self.debug_font
+        
+        # Robot center position
+        center = Point(self.x, self.y)
+        center_screen = center.to_screen(self.screen)
+        
+        center_text_world = font.render(f"mm: ({round(center.x)}, {round(center.y)})", True, (0, 255, 0))
+        center_text_pixels = font.render(f"px: {center_screen}", True, (0, 255, 0))
+        self.screen.blit(center_text_world, (center_screen[0] + 10, center_screen[1] + 10))
+        self.screen.blit(center_text_pixels, (center_screen[0] + 10, center_screen[1] + 25))
+        pygame.draw.circle(self.screen, (0, 255, 0), center_screen, 3)
 
-    def find_corners(self, x, y, heading):
-        # print(f"{x = }")
-        # print(f"{y = }")
-        # print(f"{heading=}")
-        length_of_diagonal = self.robot_size * np.sqrt(2)
-        half_diag = length_of_diagonal / 2
-        # front left corner is 45 degrees counter-clockwise from the heading angle of the robot
-        # front left corner is a distance of half_diag from the center of the robot
-        displacement = Vector(half_diag, heading + 45)
-        # print(f"{displacement=}")
-        front_left_corner = Point(x, y) + displacement.to_point()
-        # print(f"{front_left_corner=}")
+        # Robot corners
+        robot_box = self._get_robot_box()
+        corners = robot_box.corners()
+        
+        for label, corner in corners.items():
+            corner_screen = corner.to_screen(self.screen)
+            pygame.draw.circle(self.screen, (0, 0, 255), corner_screen, 3)
+            # Convert label from 'front_right' to 'FR'
+            short_label = ''.join([word[0].upper() for word in label.split('_')])
+            corner_text_world = font.render(f"{short_label} mm: ({round(corner.x)}, {round(corner.y)})", 
+                                    True, (0, 0, 255))
+            corner_text_pixels = font.render(f"px: {corner_screen}", 
+                                    True, (0, 0, 255))
+            self.screen.blit(corner_text_world, (corner_screen[0] + 5, corner_screen[1] - 30))
+            self.screen.blit(corner_text_pixels, (corner_screen[0] + 5, corner_screen[1] - 15))
+        
+        # Origin point
+        origin_screen = self.origin.to_screen(self.screen)
+        pygame.draw.circle(self.screen, (255, 0, 0), origin_screen, 5)
+        origin_text_world = font.render("Origin mm: (0, 0)", True, (255, 0, 0))
+        origin_text_pixels = font.render(f"px: {origin_screen}", True, (255, 0, 0))
+        self.screen.blit(origin_text_world, (origin_screen[0] + 10, origin_screen[1] + 10))
+        self.screen.blit(origin_text_pixels, (origin_screen[0] + 10, origin_screen[1] + 25))
+        
+        # Arena corners
+        arena_corners = self.arena.corners()
+        
+        for label, corner in arena_corners.items():
+            corner_screen = corner.to_screen(self.screen)
+            pygame.draw.circle(self.screen, (128, 0, 128), corner_screen, 5)
+            # Convert label from 'front_right' to 'TR' (top right for arena)
+            short_label = ''.join([word[0].upper() for word in label.split('_')])
+            # For arena at heading=0, 'front' is 'top'
+            short_label = short_label.replace('F', 'T').replace('B', 'B')
+            
+            arena_text_world = font.render(f"{short_label} mm: ({round(corner.x)}, ({round(corner.y)})", 
+                                    True, (128, 0, 128))
+            arena_text_pixels = font.render(f"px: {corner_screen}", 
+                                    True, (128, 0, 128))
+            offset_x = 10 if 'B' in short_label else -150
+            offset_y = 10 if 'L' in short_label else -35
+            self.screen.blit(arena_text_world, (corner_screen[0] + offset_x, corner_screen[1] + offset_y))
+            self.screen.blit(arena_text_pixels, (corner_screen[0] + offset_x, corner_screen[1] + offset_y + 15))
 
-        # back corner is 90 more degrees counter-clockwise
-        back_left_corner = Point(x, y) + Vector(half_diag, heading + 45 + 90).to_point()
-        back_right_corner = Point(x, y) + Vector(half_diag, heading + 45 + 90 + 90).to_point()
-        front_right_corner = Point(x, y) + Vector(half_diag, heading + 45 + 90 + 90 + 90).to_point()
+    def _load_images(self):
+        """Load and prepare robot images"""
+        size = self.robot_size
+        self.img_left = add_border(
+            pygame.image.load(os.path.join('img', "left", f"{size}", 'robobunny.png')),
+            color=(0, 0, 0),
+            thickness=1
+        )
+        self.img_right = add_border(
+            pygame.image.load(os.path.join('img', "right", f"{size}", 'robobunny.png')),
+            color=(0, 0, 0),
+            thickness=1
+        )
+        self.img = self.img_left
 
-        return [front_right_corner, front_left_corner, back_left_corner, back_right_corner]
+     
+    def _detect_crash(self):
+        """Check if robot has collided with arena boundaries"""
+        robot_box = self._get_robot_box()
+        corners = robot_box.corners()
 
-        """find right back corner, right front corner, left front corner, and left back corner, in that order"""
-        i = np.array([1, 2, 3, 4])
-        angle_to_corner = np.arctan(self.robot_width / self.robot_height)
-        phi = heading - angle_to_corner
-        omega = np.sqrt((self.robot_height / 2)**2 + (self.robot_width / 2)**2)
-        corner_offsets = pol2cart(omega, phi + np.radians(90) * i)
-        corner_x_values = x + corner_offsets[0]
-        corner_y_values = y + corner_offsets[1]
-        return corner_x_values, corner_y_values
-    
-    def detect_crash(self):
-        corners = self.find_corners(self.x, self.y, self.heading)
-        corner_x_values = [p.x for p in corners]
-        corner_y_values = [p.y for p in corners]
-        biggest_x = np.max(corner_x_values)
-        biggest_y = np.max(corner_y_values)
-        smallest_x = np.min(corner_x_values)
-        smallest_y = np.min(corner_y_values)
-        x_crash = (biggest_x > self.max_x_box) or (smallest_x < self.min_x_box)
-        y_crash = (biggest_y > self.max_y_box) or (smallest_y < self.min_y_box)
-        return (x_crash or y_crash)
+        # Check if any robot corner is outside arena bounds
+        for corner in corners.values():
+            xcrash = corner.x > self.max_x_box or corner.x < self.min_x_box
+            ycrash = corner.y > self.max_y_box or corner.y < self.min_y_box
+            if xcrash or ycrash:
+                return True
+        return False
 
     def motors(self, left, right, seconds):
-        # power (+ / -) to left and right motors
-        # number of seconds to maintain that
-
-        degrees_per_frame = 0.98
-
-        # for a certain number of seconds:
-        for _ in range(round(seconds * self.fps)):
-            # update position
-            if right == 1 and left == -1:
-                self.heading = (self.heading - degrees_per_frame) % 360
-            elif right == -1 and left == 1:
-                self.heading = (self.heading + degrees_per_frame) % 360
-            elif right == left:
-                if right == 0:
-                    pass
+        """Apply power to motors for a duration"""
+        num_frames = round(seconds * self.fps)
+        
+        for _ in range(num_frames):
+            self._update_position(left, right)
+            if self._detect_crash():
+                if debug:
+                    print("Crash!!!! Restarting!")
+                    self.x = 0
+                    self.y = 0
+                    self.heading = 0
                 else:
-                    speed = right * 1
-                    self.x += speed * np.cos(np.radians(self.heading))
-                    self.y += speed * np.sin(np.radians(self.heading))
-            else:
-                raise Exception("Ooops! Dr. Ebee didn't write code that let's you use those numbers as input to the `motors` function. If you *really* want those numbers, schedule some time on her calendar to help her implement that change!!")
-
-            if self.detect_crash():
-                raise Exception("Ooops! Dr. Ebee doesn't know how to simulate what happens when you hit the walls. Also, it's not good for the robot anyway. Try again!!")
+                    raise Exception(
+                        "Ooops! Dr. Ebee doesn't know how to simulate what happens when you "
+                        "hit the walls. Also, it's not good for the robot anyway. Try again!!"
+                    )
             
             self.render()
+
+    def _update_position(self, left, right):
+        """Update robot position based on motor powers"""
+        if left == right:
+            if left != 0:
+                # Move forward or backward
+                speed = left * self.speed_per_power
+                self.x += speed * cos(self.heading)
+                self.y += speed * sin(self.heading)
+        elif left == -right:
+            if right == 1:
+                # Rotate clockwise
+                self.heading = (self.heading - self.degrees_per_frame) % 360
+            else:
+                # Rotate counter-clockwise
+                self.heading = (self.heading + self.degrees_per_frame) % 360
+        else:
+            raise Exception(
+                "Ooops! Dr. Ebee didn't write code that let's you use those numbers as "
+                "input to the `motors` function. If you *really* want those numbers, "
+                "schedule some time on her calendar to help her implement that change!!"
+            )
     
     def dist_to_box(self, sonar_position, h):
-        # from sonar position, draw a line in direction heading, and find distance to nearest edge of box
-
-        # first, imagine that all 4 box edges extend out in infinite lines.
-        # we can calculate the distance (in the direction of the heading) to each box edge.
+        """Calculate distance from sonar position to nearest wall in direction h"""
+        # Distances to walls in cardinal directions
+        N = self.box_height / 2 - sonar_position.y
+        S = sonar_position.y + self.box_height / 2
+        W = sonar_position.x + self.box_width / 2
+        E = self.box_width / 2 - sonar_position.x
         
-        # let N, W, S, E be the distances to the walls in the four cardinal directions
-        N = self.box_height / 2 - sonar_position.y#sonar_position.y
-        S = sonar_position.y + self.box_height / 2#self.box_height - S
-        W = sonar_position.x + self.box_width / 2#sonar_position.x
-        E = self.box_width / 2 - sonar_position.x#self.box_width - W
-        # let T, R, B, L be the distances to the walls in the direction the robot is pointing
-        # h is the angle between the heading direction vector and the bottom/top wall
+        # Handle cardinal directions directly
         if h == 0:
             return E
         elif h == 90:
@@ -203,85 +382,117 @@ class SimulatorDriver:
             return W
         elif h == 270:
             return S
+        
+        # Calculate distance to horizontal and vertical walls
+        if sin(h) > 0:
+            dist_to_horizontal = N / sin(h)
         else:
-            if sin(h) > 0:
-                # np.sin(h) * T = N
-                T = N / sin(h)
-                dist_to_horizontal_line = T
-                if debug:
-                    print(f"dist to top: {round(T)}")
-            else:
-                B = S / -sin(h)
-                dist_to_horizontal_line = B
-                if debug:
-                    print(f"dist to bottom: {round(B)}")
-            if cos(h) > 0:
-                R = E / cos(h)
-                dist_to_vertical_line = R
-                if debug:
-                    print(f"dist to right wall: {round(R)}")
-            else:
-                L = W / -cos(h)
-                dist_to_vertical_line = L
-                if debug:
-                    print(f"dist to left wall: {round(L)}")
-            return min(dist_to_horizontal_line, dist_to_vertical_line)
+            dist_to_horizontal = S / -sin(h)
+        
+        if cos(h) > 0:
+            dist_to_vertical = E / cos(h)
+        else:
+            dist_to_vertical = W / -cos(h)
+        
+        return min(dist_to_horizontal, dist_to_vertical)
 
     def sonars(self):
-        corners = self.find_corners(self.x, self.y, self.heading)
-        left_front_corner = corners[1].to_array()
-        right_front_corner = corners[0].to_array()
-        if debug:
-            print(f"{right_front_corner=}")
-            print(f"{left_front_corner=}")
-        v = right_front_corner - left_front_corner
-        direction_vector = v / np.linalg.norm(v)
-        left_sonar_position = left_front_corner + direction_vector * 3
-        left_sonar_position = Point(left_sonar_position[0], left_sonar_position[1])
-        if debug:
-            print(f"{left_sonar_position=}")
-
-        v = left_front_corner - right_front_corner
-        direction_vector = v / np.linalg.norm(v)
-        right_sonar_position = right_front_corner + direction_vector * 3 
-        right_sonar_position = Point(right_sonar_position[0], right_sonar_position[1])
-        if debug:
-            print(f"{right_sonar_position=}")
-
-        # draw a line between the front corners
-        # sonar positions are 3cm in from the front corners
-
-        # figure out distance from left sonar to box wall
+        """Get distances from left and right sonar sensors to nearest walls"""
+        left_sonar_position, right_sonar_position = self._get_sonar_positions()
+        
         left_dist = self.dist_to_box(left_sonar_position, self.heading)
-        # figure out distance from right sonar to box wall
         right_dist = self.dist_to_box(right_sonar_position, self.heading)
+        
         return left_dist, right_dist
+    
+    def _get_sonar_positions(self):
+        """Calculate the world positions of left and right sonars"""
+        robot_box = self._get_robot_box()
+        front_right_corner, front_left_corner = robot_box.front_edge()
+        
+        front_edge = Vector.from_points(front_left_corner, front_right_corner)
+        
+        left_sonar_offset = Vector(self.sonar_inset, front_edge.theta)
+        left_sonar_position = front_left_corner + left_sonar_offset.to_point()
+        
+        right_sonar_offset = Vector(self.sonar_inset, front_edge.theta + 180)
+        right_sonar_position = front_right_corner + right_sonar_offset.to_point()
+        
+        return left_sonar_position, right_sonar_position
+
+
+    def _draw_sonar_debug(self):
+        """Draw sonar positions and detection rays"""
+        if not debug:
+            return
+        
+        left_sonar_position, right_sonar_position = self._get_sonar_positions()
+        left_dist, right_dist = self.sonars()
+        
+        # Draw sonar positions as orange circles
+        left_screen = left_sonar_position.to_screen(self.screen)
+        right_screen = right_sonar_position.to_screen(self.screen)
+        pygame.draw.circle(self.screen, (255, 165, 0), left_screen, 4)
+        pygame.draw.circle(self.screen, (255, 165, 0), right_screen, 4)
+        
+        # Draw sonar rays showing what they detect
+        left_end = left_sonar_position + Vector(left_dist, self.heading).to_point()
+        right_end = right_sonar_position + Vector(right_dist, self.heading).to_point()
+        
+        pygame.draw.line(self.screen, (255, 165, 0), left_screen, left_end.to_screen(self.screen), 2)
+        pygame.draw.line(self.screen, (255, 165, 0), right_screen, right_end.to_screen(self.screen), 2)
+        
+        # Draw distance labels
+        font = self.debug_font
+        left_text = font.render(f"L: {round(left_dist)}mm", True, (255, 165, 0))
+        right_text = font.render(f"R: {round(right_dist)}mm", True, (255, 165, 0))
+        self.screen.blit(left_text, (left_screen[0] - 50, left_screen[1] - 20))
+        self.screen.blit(right_text, (right_screen[0] + 10, right_screen[1] - 20))
 
     def render(self):
-        # Clear the screen
+        """Draw the current frame"""
         self.screen.fill((255, 255, 255))
+        
+        self._draw_robot()
+        self._draw_arena_border()
+        self._draw_debug_info()
+        self._draw_sonar_debug()
+        
+        pygame.display.flip()
+        self.clock.tick(self.fps)
 
-        # # keep bunny facing forward
+    def _draw_robot(self):
+        """Draw the robot at its current position and heading"""
         global frame
         frame += 1
+        
         if debug and frame % 100 == 0:
-            print(f"heading: {self.heading}, cosine: {np.cos(np.radians(self.heading))}")
-        if np.cos(np.radians(self.heading)) >= 0:
-            self.img = pygame.transform.rotate(self.img_right, self.heading + 90)
+            print(f"heading: {self.heading}, cosine: {cos(self.heading)}")
+        
+        # Choose image based on heading direction
+        if cos(self.heading) >= 0:
+            rotated_img = pygame.transform.rotate(self.img_right, self.heading + 90)
         else:
-            self.img = pygame.transform.rotate(self.img_left, self.heading - 90)
+            rotated_img = pygame.transform.rotate(self.img_left, self.heading - 90)
+        
+        # Draw robot at current position
+        rect = rotated_img.get_rect()
+        position = Point(self.x, self.y)
+        rect.center = position.to_screen(self.screen)
+        self.screen.blit(rotated_img, rect)
 
-        rect = self.img.get_rect()
-        x_pixels = self.x + self.box_width /2
-        y_pixels = -self.y + self.box_height /2
-        rect.center = int(x_pixels), int(y_pixels)
-        self.screen.blit(self.img, rect)
-
-        # Update the display
-        pygame.display.flip()
-
-        # Cap the frame rate to 60 FPS
-        self.clock.tick(self.fps)
+    def _draw_arena_border(self):
+        """Draw the arena boundary lines"""
+        padding = self.padding
+        border = self.wall_thickness
+        
+        # White outer border
+        pygame.draw.rect(self.screen, (255, 255, 255), 
+                        self.screen.get_rect(), padding + border)
+        
+        # Black inner border
+        inner_rect = self.screen.get_rect().inflate(-padding * 2, -padding * 2)
+        pygame.draw.rect(self.screen, (0, 0, 0), inner_rect, border)
 
     def exit(self):
         print("Exiting simulation")
@@ -293,15 +504,43 @@ class SimulatorDriver:
     def start_simulation(self):
         # Initialize the Pygame window
         pygame.init()
-        self.screen = pygame.display.set_mode((self.box_width, self.box_height))
+        pygame.font.init()  # Add this line
+        self.debug_font = pygame.font.Font(None, 18)
+        self.screen = pygame.display.set_mode((self.box_width + self.wall_thickness*2 + self.padding*2, self.box_height + self.wall_thickness*2 + self.padding*2))
         pygame.display.set_caption("Robot Simulator")
         self.render()
 
-mode = input("Do you want to run the real robot (r) or the simulator (s)?")
-if mode == "r":
-    from robot import RealRobotDriver
-    robot = Robot(use_simulator=False)
-    print("Robot simulation started!")
-else:
+if debug:
     robot = Robot(use_simulator=True)
     print("Robot simulation started!")
+
+    robot.motors(1, 1, 3)
+    while True:
+        command = input("What do you want the robot to do next?")
+        if command == "q":
+            robot.exit()
+        if command == "f":
+            robot.motors(1, 1, 0.1)
+        if command == "l":
+            robot.motors(1, -1, 0.1)
+        if command == "r":
+            robot.motors(-1, 1, 0.1)
+        if command == "rr":
+            robot.motors(-1, 1, 2)
+        if command == "b":
+            robot.motors(-1, -1, 0.1)
+        if command == "bb":
+            robot.motors(-1, -1, 2)
+        if command == "ff":
+            robot.motors(1, 1, 2)
+        if command == "ll":
+            robot.motors(1, -1, 2)
+else:
+    mode = input("Do you want to run the real robot (r) or the simulator (s)?")
+    if mode == "r":
+        from robot import RealRobotDriver
+        robot = Robot(use_simulator=False)
+        print("Robot simulation started!")
+    else:
+        robot = Robot(use_simulator=True)
+        print("Robot simulation started!")

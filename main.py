@@ -1,7 +1,11 @@
-# Import the robot control commands from the library
-from simulator import robot
-import time
+from simulator import Robot, FORWARD, BACKWARD, STOP
 
-left, right = robot.sonars()
-robot.motors(1, 1, 2)
- 
+# Create your robot
+robot = Robot(use_simulator=True)
+
+# TODO: Write your code here!
+# Use robot.motors() to move
+# Use robot.left_sonar() and robot.right_sonar() to sense obstacles
+
+# When you're done, close the simulator
+robot.exit()
