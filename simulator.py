@@ -9,7 +9,7 @@ FORWARD = 1
 BACKWARD = -1
 STOP = 0
 
-debug = True
+debug = False
 frame = 0
 
 def sin(degrees):
