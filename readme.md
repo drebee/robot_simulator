@@ -1,10 +1,59 @@
+## Installation
+
 To install all dependencies, type the following into the Terminal (if you're on Mac) or Anaconda prompt (if you're on Windows):
+```bash
+conda activate cs2526
+pip install pygame
+conda install numpy
+```
 
-    conda activate cs2526
-    pip install pygame
-    conda install numpy
+## Getting Started
 
-Project Requirements:
+Your `main.py` file is already set up with the basic structure:
+```python
+from simulator import robot, FORWARD, BACKWARD, STOP
+
+# TODO: Write your code here!
+# Use robot.motors() to move
+# Use robot.left_sonar() and robot.right_sonar() to sense obstacles
+
+# When you're done, close the simulator
+robot.exit()
+```
+
+When you run main.py, you'll be asked:
+
+* 'r' - Run on the real robot (in class)
+* 's' - Run in the simulator (for testing)
+* 'challenge' - Simulator with obstacle settings (NOT required)
+
+## API Reference
+
+**Motor Control:**
+- `robot.motors(left, right, seconds)` - Run motors for specified time
+  - `left`, `right`: Use `FORWARD` (1), `BACKWARD` (-1), or `STOP` (0)
+  - `seconds`: How long to run (can be a decimal like 0.5)
+
+**Sensors:**
+- `robot.left_sonar()` - Returns distance in cm to nearest obstacle on left
+- `robot.right_sonar()` - Returns distance in cm to nearest obstacle on right
+
+**Example:**
+```python
+# Move forward for 2 seconds
+robot.motors(FORWARD, FORWARD, 2)
+
+# Turn right by stopping right motor
+robot.motors(FORWARD, STOP, 1)
+
+# Check distance and decide what to do
+distance = robot.left_sonar()
+if distance < 5:
+    # Too close! Back up
+    robot.motors(BACKWARD, BACKWARD, 1)
+```
+
+## Project Requirements
 * [ ] robot moves
 * [ ] robot does not crash into the walls of the box
 * [ ] at least 5 calls to input
@@ -15,9 +64,6 @@ Project Requirements:
 * [ ] the robot's movement changes based on at least 5 readings of the sonar sensors
 * [ ] use at least 1 while loop OR recursive function call
 * [ ] at least one command (user input) causes the robot to move autonomously for at least 20 seconds
-
-Dr. EB Todo:
-* [ ] add noise to simulator motors and sonars
 
 ## Wiring Documentation
 

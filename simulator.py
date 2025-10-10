@@ -78,11 +78,11 @@ class Robot:
     def left_sonar(self):
         """Read the distance from the left sonar sensor
         
-        Returns: distance to the nearest object in millimeters (mm)
+        Returns: distance to the nearest object in centimeters (cm)
         
         Example:
             distance = robot.left_sonar()
-            if distance < 100:
+            if distance < 10:
                 print("Something is close on the left!")
         """
         left, right = self.driver.sonars()
@@ -91,11 +91,11 @@ class Robot:
     def right_sonar(self):
         """Read the distance from the right sonar sensor
         
-        Returns: distance to the nearest object in millimeters (mm)
+        Returns: distance to the nearest object in centimeters (cm)
         
         Example:
             distance = robot.right_sonar()
-            if distance < 100:
+            if distance < 10:
                 print("Something is close on the right!")
         """
         left, right = self.driver.sonars()
@@ -527,13 +527,25 @@ class SimulatorDriver:
             dist_to_vertical = W / -cos(h)
         
         return min(dist_to_horizontal, dist_to_vertical)
+    
+    def left_sonar(self):
+        left_sonar_position, right_sonar_position = self._get_sonar_positions()
+        
+        left_dist = self.dist_to_box(left_sonar_position, self.heading) / 10
+        return left_dist
+
+    def right_sonar(self):
+        left_sonar_position, right_sonar_position = self._get_sonar_positions()
+        right_dist = self.dist_to_box(right_sonar_position, self.heading) / 10
+        
+        return right_dist
 
     def sonars(self):
         """Get distances from left and right sonar sensors to nearest walls"""
         left_sonar_position, right_sonar_position = self._get_sonar_positions()
         
-        left_dist = self.dist_to_box(left_sonar_position, self.heading)
-        right_dist = self.dist_to_box(right_sonar_position, self.heading)
+        left_dist = self.dist_to_box(left_sonar_position, self.heading) / 10
+        right_dist = self.dist_to_box(right_sonar_position, self.heading) / 10
         
         return left_dist, right_dist
     
