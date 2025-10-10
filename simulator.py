@@ -216,6 +216,10 @@ class Obstacle:
 class SimulatorDriver:
     def __init__(self, n_obstacles = 0, randomize_obstacles = False):
         print("simulator initializing...")
+        if n_obstacles is None:
+            n_obstacles = 0
+        if randomize_obstacles is None:
+            randomize_obstacles = False
         self.n_obstacles = n_obstacles
         self.randomize_obstacles = randomize_obstacles
 
