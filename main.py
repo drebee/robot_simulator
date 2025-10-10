@@ -1,7 +1,4 @@
-from simulator import Robot, FORWARD, BACKWARD, STOP
-
-# Create your robot
-robot = Robot(use_simulator=True)
+from simulator import robot, FORWARD, BACKWARD, STOP
 
 # TODO: Write your code here!
 # Use robot.motors() to move
