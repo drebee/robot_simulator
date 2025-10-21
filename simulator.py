@@ -237,8 +237,8 @@ class SimulatorDriver:
         self.sonar_inset = 30  # 3cm from corners
         
         # Arena dimensions (real world in mm)
-        self.box_width = 1000   # 2m = 2000mm
-        self.box_height = 600  # 1m = 1000mm
+        self.box_width = 2000   # 2m = 2000mm
+        self.box_height = 1000  # 1m = 1000mm
         self.wall_thickness = 5
         self.padding = 10
 
