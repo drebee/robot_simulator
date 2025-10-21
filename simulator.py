@@ -85,8 +85,7 @@ class Robot:
             if distance < 10:
                 print("Something is close on the left!")
         """
-        left, right = self.driver.sonars()
-        return left
+        return self.driver.left_sonar()
     
     def right_sonar(self):
         """Read the distance from the right sonar sensor
@@ -98,8 +97,7 @@ class Robot:
             if distance < 10:
                 print("Something is close on the right!")
         """
-        left, right = self.driver.sonars()
-        return right
+        return self.driver.right_sonar()
     
     def exit(self):
         """Stop the simulator and close the window"""
