@@ -35,6 +35,12 @@ class RealRobotDriver:
         GPIO.setup(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.OUT)
         GPIO.setup(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.OUT)
 
+    def left_sonar(self):
+        return self.sonar(self.GPIO_LEFT_TRIGGER, self.GPIO_LEFT_ECHO)
+    
+    def right_sonar(self):
+        return self.sonar(self.GPIO_RIGHT_TRIGGER, self.GPIO_RIGHT_ECHO)
+
     def sonars(self):
         left_distance = self.sonar(self.GPIO_LEFT_TRIGGER, self.GPIO_LEFT_ECHO)
         right_distance = self.sonar(self.GPIO_RIGHT_TRIGGER, self.GPIO_RIGHT_ECHO)
