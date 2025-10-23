@@ -81,15 +81,15 @@ def backSpace():
     left = robot.left_sonar()
     right = robot.right_sonar()
 
-    x=robot.driver.x
-    y=robot.driver.y
-    r=np.sqrt(800)
-    h=(robotAngle[0]+180)%360
+    # x=robot.driver.x
+    # y=robot.driver.y
+    # r=np.sqrt(800)
+    # h=(robotAngle[0]+180)%360
 
-    W=x    
-    E=boxWidth-x
-    N=y  
-    S=boxHeight-y
+    # W=x    
+    # E=boxWidth-x
+    # N=y  
+    # S=boxHeight-y
 
     
     return 500-30#not accurate but I will deal with it later
@@ -118,11 +118,11 @@ def back(px):
 def turnLeft(theta):
     print(theta)
     print(theta*ratios[1])
-    robot.motors(1,-1,theta*ratios[1])
+    robot.motors(-1,1,theta*ratios[1])
     robotAngle[0]= (robotAngle[0] + theta) % 360
 def turnRight(theta):
    
-    robot.motors(-1,1,theta*ratios[1])
+    robot.motors(1,-1,theta*ratios[1])
     robotAngle[0]= (robotAngle[0] - theta) % 360
 
 def faceInDirection(direction):
@@ -295,7 +295,7 @@ fd = forward
 
 #'''
 while Athena == 'the best':
-    print(f'X:{robot.driver.x}, Y:{robot.driver.y}')
+    # print(f'X:{robot.driver.x}, Y:{robot.driver.y}')
     command = ask('what do you want the bot to do?\n'+str(commandsBasic))#+'\n'+str(commandsSecret))
     if command == 'help':
         print(helpMenu)

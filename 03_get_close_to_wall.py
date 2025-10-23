@@ -64,6 +64,7 @@ def closewall():
         forward_to_wall()
         print("")
         reverseright()
+        closewall()
     elif wall == "left":
         print("hi")
         rightturn(90)
@@ -73,12 +74,14 @@ def closewall():
         reverseright()
         left90()
         left90()
+        closewall()
     elif wall == "up":
         left90()
         forward_to_wall()
         # print("erm this is actually 153.72475374938272 pixles")
         reverseup()
         right90()
+        closewall()
     elif wall == "down":
         print("right 90")
         right90()
@@ -88,14 +91,13 @@ def closewall():
         reverseup()
         print("left 90")
         left90() 
+        closewall()
     elif wall == "end":
         print("glad you had fun")
         print("alright now that we have given Dr. Eb a heart attack (and me beacuse IDK IF THIS WILL WORK) lets do some reall fun stuff")
         return
     else:
         print("please tell me left, right, up, or down or end. ")
-        closewall()
-    while wall in ["right", "left", "up", "down"]:
         closewall()
 
 def bounceuselesss(): 
@@ -179,6 +181,9 @@ def bounce2():
     
     input("say anything to start")
     lefturn(45)
+    left = robot.left_sonar()
+    if left < 10:
+        robot.motors(-1, -1, 5)
     bounces = 2
     bounces = int(bounces)
     for i in range(2):
@@ -186,9 +191,7 @@ def bounce2():
             left = robot.left_sonar()
             right = robot.right_sonar() 
             timeleft = left/150
-            print(timeleft)
             timeright = right/150
-            print(timeright)
             if timeleft>timeright:
                 ftime = timeright
                 print("right")
@@ -197,14 +200,12 @@ def bounce2():
                 ftime = timeleft
             else:
                 print("Nick, Dr Eb, or anybody else who comes across this, how did this happen.")
-            print(ftime)
 
-
-
-            if ftime >= 0.9 and ftime <=1000:
-                #print("lost of pain here")
-                robot.motors(-1, -1 ,1)
-            elif ftime <= 0.5:
+            # if ftime >= 0.9 and ftime <=1000:
+            #     #print("lost of pain here")
+            #     robot.motors(-1, -1 ,1)
+            #elif ftime <= 0.5:
+            if ftime <= 1:
                 #print("0.5")
                 robot.motors(-1, -1, 1)
             else:

@@ -24,8 +24,8 @@ class RealRobotDriver:
 
         #set GPIO direction (IN / OUT)
         GPIO.setup(self.GPIO_LEFT_TRIGGER, GPIO.OUT)
-        GPIO.setup(self.GPIO_LEFT_ECHO, GPIO.IN)
         GPIO.setup(self.GPIO_RIGHT_TRIGGER, GPIO.OUT)
+        GPIO.setup(self.GPIO_LEFT_ECHO, GPIO.IN)
         GPIO.setup(self.GPIO_RIGHT_ECHO, GPIO.IN)
 
         GPIO.setup(self.GPIO_LEFT_MOTOR_SPEED, GPIO.OUT)
@@ -36,9 +36,11 @@ class RealRobotDriver:
         GPIO.setup(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.OUT)
 
     def left_sonar(self):
+        # time.sleep(0.1)
         return self.sonar(self.GPIO_LEFT_TRIGGER, self.GPIO_LEFT_ECHO)
     
     def right_sonar(self):
+        # time.sleep(0.1)
         return self.sonar(self.GPIO_RIGHT_TRIGGER, self.GPIO_RIGHT_ECHO)
 
     def sonars(self):
@@ -58,17 +60,20 @@ class RealRobotDriver:
         StopTime = time.time()
 
         # save StartTime
+        # print("waiting for echo to go to zero...")
         while GPIO.input(GPIO_ECHO) == 0:
             StartTime = time.time()
             #print(f"{StartTime=}")
 
+        # print("waiting for trigger response...")
         # save time of arrival
+        TimeElapsed = 0
         while GPIO.input(GPIO_ECHO) == 1:
             StopTime = time.time()
             #print(f"{StopTime=}")
 
-        # time difference between start and arrival
-        TimeElapsed = StopTime - StartTime
+            # time difference between start and arrival
+            TimeElapsed = StopTime - StartTime
         # multiply with the sonic speed (34300 cm/s)
         # and divide by 2, because there and back
         distance = (TimeElapsed * 34300) / 2
