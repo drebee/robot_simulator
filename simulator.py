@@ -334,7 +334,10 @@ class SimulatorDriver:
                 label = font.render(f"{i+1}", True, (255, 255, 255))
                 self.screen.blit(label, (center_screen[0] - 5, center_screen[1] - 5))
 
+    # calculate the boundaries of the box given the width of the box and the height of the box
     def _calculate_box_boundaries(self):
+        # half the width of the box from the center gets me to the right edge
+        # save that to the variable self.max_x_box
         self.max_x_box = self.box_width / 2 + self.origin.x
         self.min_x_box = self.origin.x - self.box_width / 2
         self.max_y_box = self.box_height / 2 + self.origin.y
