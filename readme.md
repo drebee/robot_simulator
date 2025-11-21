@@ -54,7 +54,15 @@ if distance < 5:
 ```
 
 ## Project Requirements
-See Schoology
+
+Your final program should include at least:
+
+* 3 input function prompts with
+* 2 possible user responses each, and
+* 5 sonar readings
+* some possibility of indefinite repetition (using a while loop or recursion)
+
+See `rubric.md` for more details.
 
 ## Wiring Documentation
 
