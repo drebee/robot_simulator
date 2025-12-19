@@ -44,6 +44,9 @@ def add_border(surface, color=(0, 0, 0), thickness=3):
 
 class Robot:
     def __init__(self, use_simulator = True, n_obstacles = None, randomize_obstacles = None):
+        now = time.time()
+        self.last_left_reading = now
+        self.last_right_reading = now
         if use_simulator:
             self.driver = SimulatorDriver(n_obstacles = n_obstacles, randomize_obstacles = randomize_obstacles)
         else:
@@ -73,6 +76,16 @@ class Robot:
             # Stop both wheels
             robot.motors(left=STOP, right=STOP, seconds=0.1)
         """
+        if seconds < 0:
+            raise ValueError(
+f"""Hi! You tried to move the robot for a {seconds} seconds, but negative numbers
+of seconds are not allowed. Thank you! - Dr. EB""")
+        if seconds < 0.5 and (left > 0 or right >0):
+            raise ValueError(
+f"""Hi! You tried to move the robot for {seconds} seconds, but the real robot might
+have weird behavior when you do that. Please give a number of seconds that's 0.5
+seconds or more. Thank you! - Dr. EB
+""")
         self.driver.motors(left, right, seconds)
     
     def left_sonar(self):
@@ -85,6 +98,13 @@ class Robot:
             if distance < 10:
                 print("Something is close on the left!")
         """
+        now = time.time()
+        if now - self.last_left_reading < 0.5:
+            raise ValueError(
+f"""Hi!! The real robot needs some time to reset the sonar sensors in between
+readings. It has been less than 0.5 seconds since your last reading from the
+left sonar sensor. Please leave more time in between your sonar sensor
+readings. Thank you! - Dr. EB""")
         return self.driver.left_sonar()
     
     def right_sonar(self):
@@ -97,6 +117,13 @@ class Robot:
             if distance < 10:
                 print("Something is close on the right!")
         """
+        now = time.time()
+        if now - self.last_left_reading < 0.5:
+            raise ValueError(
+f"""Hi!! The real robot needs some time to reset the sonar sensors in between
+readings. It has been less than 0.5 seconds since your last reading from the
+right sonar sensor. Please leave more time in between your sonar sensor
+readings. Thank you! - Dr. EB""")
         return self.driver.right_sonar()
     
     def exit(self):
@@ -436,7 +463,6 @@ class SimulatorDriver:
     def motors(self, left, right, seconds):
         """Apply power to motors for a duration"""
         num_frames = round(seconds * self.fps)
-        
         for _ in range(num_frames):
             self._update_position(left, right)
             if self._detect_crash():
