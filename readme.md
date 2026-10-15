@@ -1,10 +1,39 @@
 ## Installation
 
+### With `conda`
 To install all dependencies, type the following into the Terminal (if you're on Mac) or Anaconda prompt (if you're on Windows):
 ```bash
 conda activate cs2526
 pip install pygame
 conda install numpy
+```
+
+### With `pyenv`
+
+[from here](https://medium.com/@kushbehl/how-to-set-up-python3-install-pygame-on-a-mac-f08e25cb1432)
+
+```
+brew install pyenv
+```
+
+Download whatever the newest python is.
+
+```
+pyenv install 3.15.0
+```
+
+```
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
+echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc'
+echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n eval "$(pyenv init --path)"\n eval "$(pyenv init -)"\nfi' >> ~/.zshrc
+```
+
+```
+pyenv global 3.11.0
+```
+
+```
+pip install pygame --pre
 ```
 
 ## Getting Started
@@ -71,8 +100,8 @@ See `rubric.md` for more details.
 ![pi_pins.png](pi_pins.jpg)
 
 **Sonar Sensors (HC-SR04):**
-- Pin 6 (GPIO 6) → Left Trigger
-- Pin 5 (GPIO 5) → Left Echo
+- Pin 5 (GPIO 5) → Left Trigger
+- Pin 6 (GPIO 6) → Left Echo
 - Pin 17 (GPIO 17) → Right Trigger
 - Pin 27 (GPIO 27) → Right Echo
 
@@ -117,3 +146,12 @@ Blank x4, pin 12 (left speed/white), blank, pin 1 (left forward/blue), pin 7 (le
 6. Yellow (motor wire)
 7. Orange (from Pi pin 23 - backward)
 8. White (from Pi pin 18 - speed control)
+
+## Connecting to the pi
+
+I have a separate wifi usb for the pi, for which I need to install the appropriate [drivers](https://oemdrivers.com/network-edup-ep-1689).
+
+```
+ssh drebee@192.168.4.1
+```
+
