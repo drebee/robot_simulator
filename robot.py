@@ -15,30 +15,38 @@ class RealRobotDriver:
         self.GPIO_RIGHT_ECHO = 27
 
         # set GPIO pins for motors
-        self.GPIO_LEFT_MOTOR_SPEED = 12
-        self.GPIO_LEFT_MOTOR_BLUE = 1
-        self.GPIO_LEFT_MOTOR_ORANGE = 7
-        self.GPIO_RIGHT_MOTOR_SPEED = 18
-        self.GPIO_RIGHT_MOTOR_BLUE = 24
-        self.GPIO_RIGHT_MOTOR_ORANGE = 23
+        self.GPIO_RIGHT_MOTOR_SPEED = 12
+        self.GPIO_RIGHT_MOTOR_BLUE = 1
+        self.GPIO_RIGHT_MOTOR_ORANGE = 7
+        self.GPIO_LEFT_MOTOR_SPEED = 18
+        self.GPIO_LEFT_MOTOR_BLUE = 24
+        self.GPIO_LEFT_MOTOR_ORANGE = 23
+
+        #set up analog
+        GPIO.setup(self.GPIO_LEFT_MOTOR_SPEED, GPIO.OUT)
+        GPIO.setup(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.OUT)
+        self.right_pwm = GPIO.PWM(self.GPIO_RIGHT_MOTOR_SPEED, 50)
+        self.right_pwm.start(0)
+        self.left_pwm = GPIO.PWM(self.GPIO_LEFT_MOTOR_SPEED, 50)
+        self.left_pwm.start(0)
 
         #set GPIO direction (IN / OUT)
         GPIO.setup(self.GPIO_LEFT_TRIGGER, GPIO.OUT)
-        GPIO.setup(self.GPIO_LEFT_ECHO, GPIO.IN)
         GPIO.setup(self.GPIO_RIGHT_TRIGGER, GPIO.OUT)
+        GPIO.setup(self.GPIO_LEFT_ECHO, GPIO.IN)
         GPIO.setup(self.GPIO_RIGHT_ECHO, GPIO.IN)
 
-        GPIO.setup(self.GPIO_LEFT_MOTOR_SPEED, GPIO.OUT)
         GPIO.setup(self.GPIO_LEFT_MOTOR_BLUE, GPIO.OUT)
         GPIO.setup(self.GPIO_LEFT_MOTOR_ORANGE, GPIO.OUT)
-        GPIO.setup(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.OUT)
         GPIO.setup(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.OUT)
         GPIO.setup(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.OUT)
 
     def left_sonar(self):
+        # time.sleep(0.1)
         return self.sonar(self.GPIO_LEFT_TRIGGER, self.GPIO_LEFT_ECHO)
     
     def right_sonar(self):
+        # time.sleep(0.1)
         return self.sonar(self.GPIO_RIGHT_TRIGGER, self.GPIO_RIGHT_ECHO)
 
     def sonars(self):
@@ -58,17 +66,20 @@ class RealRobotDriver:
         StopTime = time.time()
 
         # save StartTime
+        # print("waiting for echo to go to zero...")
         while GPIO.input(GPIO_ECHO) == 0:
             StartTime = time.time()
             #print(f"{StartTime=}")
 
+        # print("waiting for trigger response...")
         # save time of arrival
+        TimeElapsed = 0
         while GPIO.input(GPIO_ECHO) == 1:
             StopTime = time.time()
             #print(f"{StopTime=}")
 
-        # time difference between start and arrival
-        TimeElapsed = StopTime - StartTime
+            # time difference between start and arrival
+            TimeElapsed = StopTime - StartTime
         # multiply with the sonic speed (34300 cm/s)
         # and divide by 2, because there and back
         distance = (TimeElapsed * 34300) / 2
@@ -78,33 +89,39 @@ class RealRobotDriver:
     def stop(self):
         GPIO.output(self.GPIO_LEFT_MOTOR_BLUE, GPIO.LOW)
         GPIO.output(self.GPIO_LEFT_MOTOR_ORANGE, GPIO.LOW)
-        GPIO.output(self.GPIO_LEFT_MOTOR_SPEED, GPIO.LOW)
+        #GPIO.output(self.GPIO_LEFT_MOTOR_SPEED, GPIO.LOW)
+        self.left_pwm.ChangeDutyCycle(0)
         GPIO.output(self.GPIO_RIGHT_MOTOR_BLUE, GPIO.LOW)
         GPIO.output(self.GPIO_RIGHT_MOTOR_ORANGE, GPIO.LOW)
-        GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.LOW)
+        #GPIO.output(self.GPIO_RIGHT_MOTOR_SPEED, GPIO.LOW)
+        self.right_pwm.ChangeDutyCycle(0)
         GPIO.output(self.GPIO_LEFT_TRIGGER, GPIO.LOW)
         GPIO.output(self.GPIO_RIGHT_TRIGGER, GPIO.LOW)
 
-    def motor(self, velocity, speed_pin, blue_pin, orange_pin):
+    def motor(self, velocity, speed_pwm, blue_pin, orange_pin):
         if velocity == 0:
             GPIO.output(blue_pin, GPIO.LOW)
             GPIO.output(orange_pin, GPIO.LOW)
-            GPIO.output(speed_pin, GPIO.LOW)
+            #GPIO.output(speed_pin, GPIO.LOW)
+            speed_pwm.ChangeDutyCycle(0)
         elif velocity > 0:
             GPIO.output(blue_pin, GPIO.HIGH)
             GPIO.output(orange_pin, GPIO.LOW)
-            GPIO.output(speed_pin, GPIO.HIGH)
+            speed_pwm.ChangeDutyCycle(max(100, int(velocity*100)))
+            #GPIO.output(speed_pin, GPIO.HIGH)
         else:
             GPIO.output(blue_pin, GPIO.LOW)
             GPIO.output(orange_pin, GPIO.HIGH)
-            GPIO.output(speed_pin, GPIO.HIGH)
+            speed_pwm.ChangeDutyCycle(max(100, int(velocity*100)))
+            #GPIO.output(speed_pin, GPIO.HIGH)
     
     def motors(self, left, right, seconds):
         # Call real robot hardware control for left motor
         #self.robot_hardware.set_left_motor_speed(left)
         #self.robot_hardware.set_right_motor_speed(right)
-        self.motor(left, self.GPIO_LEFT_MOTOR_SPEED, self.GPIO_LEFT_MOTOR_BLUE, self.GPIO_LEFT_MOTOR_ORANGE)
-        self.motor(right, self.GPIO_RIGHT_MOTOR_SPEED, self.GPIO_RIGHT_MOTOR_BLUE, self.GPIO_RIGHT_MOTOR_ORANGE)
+        self.motor(left, self.left_pwm, self.GPIO_LEFT_MOTOR_BLUE, self.GPIO_LEFT_MOTOR_ORANGE)
+        # left motor is a little stuck, so correct for that in the code
+        self.motor(right*0.8, self.right_pwm, self.GPIO_RIGHT_MOTOR_BLUE, self.GPIO_RIGHT_MOTOR_ORANGE)
         time.sleep(seconds)
         self.stop()
 

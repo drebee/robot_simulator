@@ -8,34 +8,6 @@ pip install pygame
 conda install numpy
 ```
 
-### With `pyenv`
-
-[from here](https://medium.com/@kushbehl/how-to-set-up-python3-install-pygame-on-a-mac-f08e25cb1432)
-
-```
-brew install pyenv
-```
-
-Download whatever the newest python is.
-
-```
-pyenv install 3.15.0
-```
-
-```
-echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
-echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc'
-echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n eval "$(pyenv init --path)"\n eval "$(pyenv init -)"\nfi' >> ~/.zshrc
-```
-
-```
-pyenv global 3.11.0
-```
-
-```
-pip install pygame --pre
-```
-
 ## Getting Started
 
 Your `main.py` file is already set up with the basic structure:

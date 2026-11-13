@@ -3,9 +3,9 @@ from simulator import robot, FORWARD, BACKWARD, STOP
 while True:
     command = input("Motor (m) or Sonars (s) or Quit (q)? ")
     if command == "m":
-        left_power = int(input("Left motor: "))
-        right_power = int(input("Right motor: "))
-        seconds = int(input("Seconds: "))
+        left_power = float(input("Left motor: "))
+        right_power = float(input("Right motor: "))
+        seconds = float(input("Seconds: "))
 
         robot.motors(left = left_power, right = right_power, seconds = seconds)
 
