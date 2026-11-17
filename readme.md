@@ -33,7 +33,7 @@ When you run main.py, you'll be asked:
 **Motor Control:**
 - `robot.motors(left, right, seconds)` - Run motors for specified time
   - `left`, `right`: Use `FORWARD` (1), `BACKWARD` (-1), or `STOP` (0)
-  - `seconds`: How long to run (can be a decimal like 0.5)
+  - `seconds`: How long to run (can be a decimal, but must be greater than or equal to 0.5)
 
 **Sensors:**
 - `robot.left_sonar()` - Returns distance in cm to nearest obstacle on left

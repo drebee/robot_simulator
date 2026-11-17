@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import time
 
-os.environ['SDL_VIDEO_WINDOW_POS'] = "%d, %d" %(400, -400)
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d, %d" %(1000, -1000)
 
 # Motor power constants - use these with the motors() function
 FORWARD = 1
@@ -12,8 +12,7 @@ BACKWARD = -1
 STOP = 0
 
 debug = False
-mode = "obstacles"
-frame = 0
+scale = 1
 
 def sin(degrees):
     return np.sin(np.radians(degrees))
@@ -45,12 +44,12 @@ def add_border(surface, color=(0, 0, 0), thickness=3):
     return new_surface
 
 class Robot:
-    def __init__(self, use_simulator = True, n_obstacles = None, randomize_obstacles = None):
+    def __init__(self, use_simulator = True):
         now = time.time()
         self.last_left_reading = now
         self.last_right_reading = now
         if use_simulator:
-            self.driver = SimulatorDriver(n_obstacles = n_obstacles, randomize_obstacles = randomize_obstacles)
+            self.driver = SimulatorDriver()
         else:
             self.driver = RealRobotDriver()  # driver can be a simulator or real robot
 
@@ -241,14 +240,13 @@ class Obstacle:
 
 # Simulator Driver
 class SimulatorDriver:
-    def __init__(self, n_obstacles = 0, randomize_obstacles = False):
+    def __init__(self):
         print("simulator initializing...")
-        if n_obstacles is None:
-            n_obstacles = 0
-        if randomize_obstacles is None:
-            randomize_obstacles = False
-        self.n_obstacles = n_obstacles
-        self.randomize_obstacles = randomize_obstacles
+        self.frame = 0
+
+        self.scale = scale
+        self.sonar_error = 0.05
+        self.motor_error = 0.01
 
         # Physics constants
         self.fps = 60
@@ -280,38 +278,6 @@ class SimulatorDriver:
 
         self._calculate_box_boundaries()
 
-        self.obstacle_specs = [
-            {
-                'width': 70,
-                'height': 70, 
-                'name': 'Square',
-                'x': -300,
-                'y': 180,
-                'heading': 30
-            },
-            {
-                'width': 100, 
-                'height': 120, 
-                'name': 'Short Rectangle',
-                'x': 400,
-                'y': 50,
-                'heading': 0
-            },
-            {
-                'width': 70,
-                'height': 250,
-                'name': 'Long Rectangle',
-                'x': -100,
-                'y': -170,
-                'heading': 60
-            },
-        ]
-
-        # Obstacles
-        self.obstacles = []
-        if self.n_obstacles > 0:
-            self._generate_obstacles()
-
         # Graphics
         self.clock = pygame.time.Clock()
         self._load_images()
@@ -335,33 +301,6 @@ class SimulatorDriver:
             obstacle = Obstacle(x, y, width, height, heading)
             self.obstacles.append(obstacle)
             print(f"Obstacle {i+1} ({spec['name']}): {width}x{height}mm at ({x}, {y}), rotated {heading}°")
-
-    def _draw_obstacles(self):
-        """Draw obstacles on the screen"""
-        for i, obstacle in enumerate(self.obstacles):
-            # Get obstacle corners
-            corners = obstacle.corners()
-            
-            # Convert corners to screen coordinates
-            corner_points = [
-                corners['front_right'].to_screen(self.screen),
-                corners['front_left'].to_screen(self.screen),
-                corners['back_left'].to_screen(self.screen),
-                corners['back_right'].to_screen(self.screen)
-            ]
-            
-            # Draw filled rectangle
-            pygame.draw.polygon(self.screen, (150, 75, 0), corner_points)  # Brown color
-            
-            # Draw border
-            pygame.draw.polygon(self.screen, (0, 0, 0), corner_points, 2)  # Black border
-            
-            # Draw obstacle number (optional, for debugging)
-            if debug:
-                center_screen = obstacle.center.to_screen(self.screen)
-                font = self.debug_font
-                label = font.render(f"{i+1}", True, (255, 255, 255))
-                self.screen.blit(label, (center_screen[0] - 5, center_screen[1] - 5))
 
     # calculate the boundaries of the box given the width of the box and the height of the box
     def _calculate_box_boundaries(self):
@@ -435,7 +374,7 @@ class SimulatorDriver:
 
     def _load_images(self):
         """Load and prepare robot images"""
-        size = mm_to_px(self.robot_size)
+        size = self.rescale(mm_to_px(self.robot_size))
         self.img_left = add_border(
             pygame.image.load(os.path.join('img', "left", f"{size}", 'robobunny.png')),
             color=(0, 0, 0),
@@ -484,10 +423,14 @@ class SimulatorDriver:
     def _update_position(self, left, right):
         """Update robot position based on motor powers"""
         if (left == 0) and (right == 0):
-            pass
+            return
+
+        left_error = max(np.random.normal(0, left*self.motor_error), 0)
+        left_error = max(np.random.normal(0, left*self.motor_error), 0)
+
         if (left == right) and (left != 0):
             # Move forward or backward
-            speed = left * self.speed_per_power
+            speed = (left) * self.speed_per_power
             self.x += speed * cos(self.heading)
             self.y += speed * sin(self.heading)
         elif left == -right:
@@ -496,30 +439,7 @@ class SimulatorDriver:
                 self.heading = (self.heading - self.degrees_per_frame) % 360
             else:
                 # Rotate counter-clockwise
-                self.heading = (self.heading + self.degrees_per_frame) % 360
-
-        # elif (left == 0 or right == 0) and (abs(left) == 1 or abs(right) == 1):
-        #     # One wheel stopped, pivot around it
-        #     # Pivoting is half the speed of spinning in place
-        #     pivot_degrees_per_frame = self.degrees_per_frame / 2
-        #     pivot_forward_per_frame = 0.208  # 75mm in 6 seconds = 12.5mm/sec = 0.208mm/frame
-            
-        #     if left != 0 and right == 0:
-        #         # Pivot around left wheel
-        #         direction = 1 if left == 1 else 1  # clockwise if left forward
-        #         self.heading = (self.heading - direction * pivot_degrees_per_frame) % 360
-        #         # Move forward in current heading direction
-        #         self.x += left * pivot_forward_per_frame * cos(self.heading)
-        #         self.y += left * pivot_forward_per_frame * sin(self.heading)
-                
-        #     elif right != 0 and left == 0:
-        #         # Pivot around right wheel
-        #         direction = 1 if left == 1 else -1  # counter-clockwise if left forward
-        #         self.heading = (self.heading + direction * pivot_degrees_per_frame) % 360
-        #         # Move forward in current heading direction
-        #         self.x += left * pivot_forward_per_frame * cos(self.heading)
-        #         self.y += left * pivot_forward_per_frame * sin(self.heading)
-                
+                self.heading = (self.heading + self.degrees_per_frame) % 360  
         else:
             raise Exception(
                 "Ooops! Dr. Ebee didn't write code that let's you use those numbers as "
@@ -562,20 +482,29 @@ class SimulatorDriver:
         left_sonar_position, right_sonar_position = self._get_sonar_positions()
         
         left_dist = self.dist_to_box(left_sonar_position, self.heading) / 10
-        return left_dist
+
+        left_error = np.random.normal(0, left_dist*self.sonar_error)
+        left_measurment = max(left_dist + left_error, 0)
+
+        return left_measurment
 
     def right_sonar(self):
         left_sonar_position, right_sonar_position = self._get_sonar_positions()
         right_dist = self.dist_to_box(right_sonar_position, self.heading) / 10
+
+        right_error = np.random.normal(0, right_dist*self.sonar_error)
+        right_measurement = max(right_dist + right_error, 0)
         
-        return right_dist
+        return right_measurement
 
     def sonars(self):
-        """Get distances from left and right sonar sensors to nearest walls"""
+        """Get distances from left and right sonar sensors to nearest walls.
+        Add noise to simulate real-world conditions"""
         left_sonar_position, right_sonar_position = self._get_sonar_positions()
         
         left_dist = self.dist_to_box(left_sonar_position, self.heading) / 10
         right_dist = self.dist_to_box(right_sonar_position, self.heading) / 10
+
         
         return left_dist, right_dist
     
@@ -629,7 +558,6 @@ class SimulatorDriver:
 
         self._draw_robot()
         self._draw_arena_border()
-        self._draw_obstacles()
         self._draw_debug_info()
         self._draw_sonar_debug()
         
@@ -638,10 +566,9 @@ class SimulatorDriver:
 
     def _draw_robot(self):
         """Draw the robot at its current position and heading"""
-        global frame
-        frame += 1
+        self.frame += 1
         
-        if debug and frame % 100 == 0:
+        if debug and self.frame % 100 == 0:
             print(f"heading: {self.heading}, cosine: {cos(self.heading)}")
         
         # Choose image based on heading direction
@@ -681,51 +608,23 @@ class SimulatorDriver:
         pygame.init()
         pygame.font.init()  # Add this line
         self.debug_font = pygame.font.Font(None, 18)
-        self.screen = pygame.display.set_mode((mm_to_px(self.box_width) + self.wall_thickness*2 + self.padding*2, mm_to_px(self.box_height) + self.wall_thickness*2 + self.padding*2))
+        screen_width = self.rescale(mm_to_px(self.box_width) + self.wall_thickness*2 + self.padding*2)
+        screen_height = self.rescale(mm_to_px(self.box_height) + self.wall_thickness*2 + self.padding*2)
+        self.screen = pygame.display.set_mode((screen_width, screen_height))
         pygame.display.set_caption("Robot Simulator")
         self.render()
 
-if debug:
-    if mode == "movement":
+    def rescale(self, x):
+        return int(x * self.scale)
+
+while True:
+    mode = input("Do you want to run the real robot (r) or the simulator (s)?")
+    if mode == "r":
+        from robot import RealRobotDriver
+        robot = Robot(use_simulator=False)
+        break
+    elif mode == "s":
         robot = Robot(use_simulator=True)
-    elif mode == "obstacles":
-        robot = Robot(use_simulator=True, n_obstacles=3, randomize_obstacles=False)
-    while True:
-        command = input("What do you want the robot to do next?")
-        if command == "q":
-            robot.exit()
-        if command == "f":
-            robot.motors(1, 1, 0.1)
-        if command == "l":
-            robot.motors(1, -1, 0.1)
-        if command == "r":
-            robot.motors(-1, 1, 0.1)
-        if command == "rr":
-            robot.motors(-1, 1, 2)
-        if command == "b":
-            robot.motors(-1, -1, 0.1)
-        if command == "bb":
-            robot.motors(-1, -1, 2)
-        if command == "ff":
-            robot.motors(1, 1, 2)
-        if command == "ll":
-            robot.motors(1, -1, 2)
-else:
-    while True:
-        mode = input("Do you want to run the real robot (r) or the simulator (s)?")
-        if mode == "r":
-            from robot import RealRobotDriver
-            robot = Robot(use_simulator=False)
-            break
-        elif mode == "s":
-            robot = Robot(use_simulator=True)
-            break
-        elif mode == "challenge":
-            print("*** Simulator settings:")
-            n = int(input("*** How many obstacles? (0-3): "))
-            is_random = input("*** Randomize obstacle positions? (y/n): ").lower() == 'y'
-            print(f"Starting simulation with {n} obstacles...")
-            robot = Robot(use_simulator=True, n_obstacles=n, randomize_obstacles=is_random)
-            break
-        else:
-            print("Please choose 'r' or 's'")
+        break
+    else:
+        print("Please choose 'r' or 's'")
