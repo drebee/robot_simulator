@@ -4,6 +4,8 @@ import numpy as np
 import sys
 import time
 
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d, %d" %(400, -400)
+
 # Motor power constants - use these with the motors() function
 FORWARD = 1
 BACKWARD = -1
@@ -481,41 +483,42 @@ class SimulatorDriver:
 
     def _update_position(self, left, right):
         """Update robot position based on motor powers"""
-        if left == right:
-            if left != 0:
-                # Move forward or backward
-                speed = left * self.speed_per_power
-                self.x += speed * cos(self.heading)
-                self.y += speed * sin(self.heading)
+        if (left == 0) and (right == 0):
+            pass
+        if (left == right) and (left != 0):
+            # Move forward or backward
+            speed = left * self.speed_per_power
+            self.x += speed * cos(self.heading)
+            self.y += speed * sin(self.heading)
         elif left == -right:
-            if right == 1:
+            if left > 0:
                 # Rotate clockwise
                 self.heading = (self.heading - self.degrees_per_frame) % 360
             else:
                 # Rotate counter-clockwise
                 self.heading = (self.heading + self.degrees_per_frame) % 360
 
-        elif (left == 0 or right == 0) and (abs(left) == 1 or abs(right) == 1):
-            # One wheel stopped, pivot around it
-            # Pivoting is half the speed of spinning in place
-            pivot_degrees_per_frame = self.degrees_per_frame / 2
-            pivot_forward_per_frame = 0.208  # 75mm in 6 seconds = 12.5mm/sec = 0.208mm/frame
+        # elif (left == 0 or right == 0) and (abs(left) == 1 or abs(right) == 1):
+        #     # One wheel stopped, pivot around it
+        #     # Pivoting is half the speed of spinning in place
+        #     pivot_degrees_per_frame = self.degrees_per_frame / 2
+        #     pivot_forward_per_frame = 0.208  # 75mm in 6 seconds = 12.5mm/sec = 0.208mm/frame
             
-            if left == 0 and right != 0:
-                # Pivot around left wheel
-                direction = -1 if right == 1 else 1  # clockwise if right forward
-                self.heading = (self.heading - direction * pivot_degrees_per_frame) % 360
-                # Move forward in current heading direction
-                self.x += right * pivot_forward_per_frame * cos(self.heading)
-                self.y += right * pivot_forward_per_frame * sin(self.heading)
+        #     if left != 0 and right == 0:
+        #         # Pivot around left wheel
+        #         direction = 1 if left == 1 else 1  # clockwise if left forward
+        #         self.heading = (self.heading - direction * pivot_degrees_per_frame) % 360
+        #         # Move forward in current heading direction
+        #         self.x += left * pivot_forward_per_frame * cos(self.heading)
+        #         self.y += left * pivot_forward_per_frame * sin(self.heading)
                 
-            elif right == 0 and left != 0:
-                # Pivot around right wheel
-                direction = 1 if left == 1 else -1  # counter-clockwise if left forward
-                self.heading = (self.heading + direction * pivot_degrees_per_frame) % 360
-                # Move forward in current heading direction
-                self.x += left * pivot_forward_per_frame * cos(self.heading)
-                self.y += left * pivot_forward_per_frame * sin(self.heading)
+        #     elif right != 0 and left == 0:
+        #         # Pivot around right wheel
+        #         direction = 1 if left == 1 else -1  # counter-clockwise if left forward
+        #         self.heading = (self.heading + direction * pivot_degrees_per_frame) % 360
+        #         # Move forward in current heading direction
+        #         self.x += left * pivot_forward_per_frame * cos(self.heading)
+        #         self.y += left * pivot_forward_per_frame * sin(self.heading)
                 
         else:
             raise Exception(
@@ -623,7 +626,7 @@ class SimulatorDriver:
     def render(self):
         """Draw the current frame"""
         self.screen.fill((255, 255, 255))
-        
+
         self._draw_robot()
         self._draw_arena_border()
         self._draw_obstacles()

@@ -127,3 +127,7 @@ I have a separate wifi usb for the pi, for which I need to install the appropria
 ssh drebee@192.168.4.1
 ```
 
+## To Do
+
+[ ] simulate power less than 1
+[ ] some randomization in simulator position and sonar
