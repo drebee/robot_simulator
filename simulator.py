@@ -256,10 +256,9 @@ class SimulatorDriver:
         # Robot dimensions (real world in mm)
         # actual robot pegboard is 20cm x 20cm with the wheels sticking out
         # another 1cm on each side
-        self.robot_size = 200  # 20cm = 200mm
-        self.robot_width = self.robot_size
-        self.robot_height = self.robot_size
-        self.sonar_inset = 30  # 3cm from corners
+        self.robot_width = 223  # 22.3cm = 223mm
+        self.robot_height = 200 # 20cm = 200mm
+        self.sonar_inset = 30   # 3cm from corners
         
         # Arena dimensions (real world in mm)
         self.box_width = 2000   # 2m = 2000mm
@@ -374,18 +373,24 @@ class SimulatorDriver:
 
     def _load_images(self):
         """Load and prepare robot images"""
-        size = self.rescale(mm_to_px(self.robot_size))
+        height = self.rescale(mm_to_px(self.robot_height))
+        width = self.rescale(mm_to_px(self.robot_width))
         self.img_left = add_border(
-            pygame.image.load(os.path.join('img', "left", f"{size}", 'robobunny.png')),
+            pygame.transform.scale(
+                pygame.image.load(os.path.join('img', "left", f"{height}", 'robobunny.png')),
+                (width, height)
+            ),
             color=(0, 0, 0),
             thickness=1
         )
         self.img_right = add_border(
-            pygame.image.load(os.path.join('img', "right", f"{size}", 'robobunny.png')),
+            pygame.transform.scale(
+                pygame.image.load(os.path.join('img', "right", f"{height}", 'robobunny.png')),
+                (width, height)
+            ),
             color=(0, 0, 0),
             thickness=1
         )
-        self.img = self.img_left
 
      
     def _detect_crash(self):
@@ -420,13 +425,42 @@ class SimulatorDriver:
             
             self.render()
 
-    def _update_position(self, left, right):
+    def _update_position(self, left_raw, right_raw):
         """Update robot position based on motor powers"""
-        if (left == 0) and (right == 0):
+        if (left_raw == 0) and (right_raw == 0):
             return
 
-        left_error = max(np.random.normal(0, left*self.motor_error), 0)
-        left_error = max(np.random.normal(0, left*self.motor_error), 0)
+        left_error = 0#np.random.normal(0, left_raw*self.motor_error)
+        right_error = 0#np.random.normal(0, right_raw*self.motor_error)
+        left = left_raw + left_error
+        right = right_raw + right_error
+
+        # if (left == right) and left != 0:
+        #     # Move forward or backward
+        #     speed = (left) * self.speed_per_power
+        #     self.x += speed * cos(self.heading)
+        #     self.y += speed * sin(self.heading)
+        #     return
+
+        # b = 215 # distance between wheels
+
+        # # is this in radians or degrees? heading is in degrees.
+        # angular_velocity_around_ICR = (right - left) / b * self.speed_per_power * 360 / 2 / 3.1415926535
+        # R = b / 2 * (right + left) / (right - left)
+        # # center of wheels is 6.5 cm from front of robot
+        # # height of robot is 20cm
+        # # center of robot is 10cm
+        # # center of wheels is 3.5cm in front of center of robot
+        # center_of_wheels = Point(self.x, self.y) + Vector(35, self.heading).to_point()
+        # pos_ICR =  center_of_wheels + Vector(R, self.heading - 90).to_point() # instantaneous center of rotation
+        # # heading will shift by angular velocity
+        # self.heading = (self.heading + angular_velocity_around_ICR) % 360
+        # # position will be...
+        # # from ICR, R is distance. global angle is heading minus 90 plus angular velocity???
+        # new_robot_pos = pos_ICR + Vector(R, self.heading + 90 + angular_velocity_around_ICR).to_point()
+        # self.x = new_robot_pos.x
+        # self.y = new_robot_pos.y
+
 
         if (left == right) and (left != 0):
             # Move forward or backward
@@ -570,6 +604,7 @@ class SimulatorDriver:
         
         if debug and self.frame % 100 == 0:
             print(f"heading: {self.heading}, cosine: {cos(self.heading)}")
+
         
         # Choose image based on heading direction
         if cos(self.heading) >= 0:
